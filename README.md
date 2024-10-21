@@ -1,2 +1,2 @@
 # sign-language-detection
-German Sign Language Detection for
+German Sign Language Detection
