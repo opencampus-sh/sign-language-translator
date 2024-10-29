@@ -1,10 +1,23 @@
 # ML Development Guide
 
+## Table of Contents
+
+- [Overview](#overview)
+  - [Data Storage Structure](#data-storage-structure)
+- [Google Colab Usage (Recommended)](#google-colab-usage)
+- [Local Development Setup](#local-development-setup)
+- [Working with Data](#working-with-data)
+- [Best Practices](#best-practices)
+- [Troubleshooting](#troubleshooting)
+- [Support](#support)
+
 ## Overview
 
 This guide explains how to manage training data and models using Google Cloud Storage (GCS) for our sign language translation project.
 
-## Data Storage Structure
+### Data Storage Structure
+
+Our training data is organized in the following structure:
 
 ```
 sign-lang-training-data-dev/
@@ -12,19 +25,53 @@ sign-lang-training-data-dev/
 ├── processed-frames/   # Extracted and processed frames
 ├── annotations/        # Labels and annotations
 └── datasets/          # Prepared training/validation sets
-
 ```
 
-## Prerequisites
+## Google Colab Usage (Recommended)
 
-1. Install the Google Cloud SDK
-2. Have appropriate GCP project permissions
-3. Python 3.7+ with required packages:
-   ```bash
-   pip install google-cloud-storage requests
-   ```
+The easiest way to work with our training data is through Google Colab. No local setup required!
 
-## Initial Setup
+### Option 1: Mount the Bucket (File System Access)
+
+```python
+from google.colab import auth
+import os
+
+# Authenticate (this will prompt for user login)
+auth.authenticate_user()
+
+# Mount the bucket using gcsfuse
+!apt-get install -y gcsfuse
+!mkdir -p /content/gcs
+!gcsfuse sign-lang-training-data-dev /content/gcs
+
+# Now you can access files like they're local
+with open('/content/gcs/datasets/training/dataset.pkl', 'rb') as f:
+    data = f.read()
+
+# When done, unmount
+!fusermount -u /content/gcs
+```
+
+### Option 2: Direct API Access
+
+```python
+from google.colab import auth
+from google.cloud import storage
+
+# Authenticate
+auth.authenticate_user()
+
+# Use the storage client
+client = storage.Client()
+bucket = client.bucket('sign-lang-training-data-dev')
+
+# Example: Download a file
+blob = bucket.blob('datasets/training/dataset.pkl')
+data = blob.download_as_bytes()
+```
+
+## Local Development Setup
 
 1. Authenticate and set up your Google Cloud environment:
 
