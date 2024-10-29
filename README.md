@@ -200,11 +200,6 @@ gsutil stat gs://sign-lang-training-data-dev/datasets/training/dataset.pkl
    - Use appropriate IAM roles
    - Regularly rotate service account keys
 
-4. **Error Handling**
-   - Always include error handling in production code
-   - Verify uploads with checksums
-   - Implement retry logic for network operations
-
 ## Troubleshooting
 
 Common issues and solutions:
@@ -218,5 +213,3 @@ Common issues and solutions:
 For additional help:
 
 - Check [GCS Documentation](https://cloud.google.com/storage/docs)
-- Contact the ML team on Slack (#ml-support)
-- File issues in our [GitHub repository](https://github.com/your-org/project)
