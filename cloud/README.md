@@ -162,3 +162,17 @@ We provide a script to easily manage user access to GCS buckets. The script is l
 ./setup/manage_access.sh add employee@company.com viewer
 ./setup/manage_access.sh add employee@company.com writer
 ```
+
+2. Remove access:
+
+```bash
+./setup/manage_access.sh remove employee@company.com viewer
+```
+
+3. List current permissions:
+
+```bash
+./setup/manage_access.sh list
+```
+
+For more details about the infrastructure and available resources, see the terraform configurations in `terraform/` directory.
