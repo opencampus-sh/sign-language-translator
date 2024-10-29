@@ -1,0 +1,8 @@
+# .gitignore in cloud/terraform/
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+*.tfvars
+!example.tfvars
+.terraform.lock.hcl
