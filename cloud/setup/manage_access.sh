@@ -1,10 +1,22 @@
 #!/bin/bash
 
+# Import variables from terraform.tfvars
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TFVARS_FILE="$SCRIPT_DIR/../terraform/environments/dev/terraform.tfvars"
+
+if [ ! -f "$TFVARS_FILE" ]; then
+    echo "Error: terraform.tfvars not found at $TFVARS_FILE"
+    exit 1
+fi
+
+# Parse project_id from terraform.tfvars
+PROJECT_ID=$(grep 'project_id' "$TFVARS_FILE" | cut -d'=' -f2 | tr -d '" ' )
+
 # Configuration
 BUCKETS=(
-    "sign-lang-training-data-dev"
-    "sign-lang-models-dev"
-    "sign-lang-evaluation-dev"
+    "${PROJECT_ID}-training-data-dev"
+    # "${PROJECT_ID}-models-dev"
+    # "${PROJECT_ID}-evaluation-dev"
 )
 
 # Role mappings
@@ -92,8 +104,7 @@ case $1 in
         verify_email $2
         remove_access $2 $3
         ;;
-    list")
-
+    "list")
         list_access
         ;;
     *)
