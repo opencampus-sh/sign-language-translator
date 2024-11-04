@@ -4,9 +4,9 @@ This project provides a sign language translation service using MediaPipe for ke
 
 ## Documentation
 
-- [Data Access and Dataset Information](docs/DATA.md)
-- [Model Training Guide](docs/TRAINING.md)
-- [Deployment Scenarios](docs/DEPLOYMENT.md)
+- [Data Access and Dataset Information](app/docs/DATA.md)
+- [Model Training Guide](app/docs/TRAINING.md)
+- [Deployment Scenarios](app/docs/DEPLOYMENT.md)
 
 ## Project Structure
 
