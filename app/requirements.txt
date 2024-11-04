@@ -1,0 +1,9 @@
+# app/requirements.txt
+flask==2.0.1
+gunicorn==20.1.0
+mediapipe==0.10.0
+numpy==1.21.0
+opencv-python-headless==4.5.3.56
+torch==2.0.0
+transformers==4.30.0  # For your fine-tuned Whisper model
+python-multipart==0.0.6  # For handling file uploads

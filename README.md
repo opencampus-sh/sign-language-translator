@@ -1,262 +1,161 @@
-# ML Development Guide
+# Sign Language Translator
 
-## Table of Contents
+This project provides a sign language translation service using MediaPipe for keypoint extraction and a fine-tuned Whisper model for translation. The service is deployed on Google Cloud Run and managed with Terraform.
 
-- [Overview](#overview)
-  - [Data Storage Structure](#data-storage-structure)
-- [Google Colab Usage (Recommended)](#google-colab-usage)
-- [Local Development Setup](#local-development-setup)
-- [Working with Data](#working-with-data)
-- [Best Practices](#best-practices)
-- [Troubleshooting](#troubleshooting)
-- [Support](#support)
+## Documentation
 
-## Overview
+- [Data Access and Dataset Information](docs/DATA.md)
+- [Model Training Guide](docs/TRAINING.md)
+- [Deployment Scenarios](docs/DEPLOYMENT.md)
 
-This guide explains how to manage training data and models using Google Cloud Storage (GCS) for our sign language translation project.
-
-### Data Storage Structure
-
-Our training data is organized in the following structure:
+## Project Structure
 
 ```
-sign-lang-training-data-dev/
-├── raw-videos/         # Original sign language videos
-├── processed-frames/   # Extracted and processed frames
-├── annotations/        # Labels and annotations
-└── datasets/          # Prepared training/validation sets
+sign-language-translator/
+├── app/                  # Application code
+├── terraform/           # Infrastructure as Code
+│   ├── environments/    # Environment-specific configs
+│   └── modules/         # Reusable Terraform modules
+├── build/              # Build configurations
+└── setup/              # Setup scripts
 ```
 
-## Google Colab Usage (Recommended)
+## Prerequisites
 
-The easiest way to work with our training data is through Google Colab. No local setup required!
+- Google Cloud SDK
+- Terraform
+- Python 3.9+
+- Docker
+- (Optional) Hugging Face account and access token for the real model
 
-### Option 1: Mount the Bucket (File System Access)
+## Getting Started
 
-```python
-from google.colab import auth
-import os
-
-# Authenticate (this will prompt for user login)
-auth.authenticate_user()
-
-# Mount the bucket using gcsfuse
-!apt-get install -y gcsfuse
-!mkdir -p /content/gcs
-!gcsfuse sign-lang-training-data-dev /content/gcs
-
-# Now you can access files like they're local
-with open('/content/gcs/datasets/training/dataset.pkl', 'rb') as f:
-    data = f.read()
-
-# When done, unmount
-!fusermount -u /content/gcs
-```
-
-### Option 2: Direct API Access
-
-```python
-from google.colab import auth
-from google.cloud import storage
-
-# Authenticate
-auth.authenticate_user()
-
-# Use the storage client
-client = storage.Client()
-bucket = client.bucket('sign-lang-training-data-dev')
-
-# Example: Download a file
-blob = bucket.blob('datasets/training/dataset.pkl')
-data = blob.download_as_bytes()
-```
-
-## Local Development Setup
-
-1. Authenticate and set up your Google Cloud environment:
-
-   ```bash
-   # Login to Google Cloud
-   gcloud auth login
-
-   # Set your project
-   gcloud config set project sign-lang-translator-20241029
-
-   # Verify authentication for Python SDK
-   gcloud auth application-default login
-   ```
-
-2. Configure your environment:
-   ```python
-   # config.py
-   BUCKET_NAMES = {
-       'training': 'sign-lang-training-data-dev',
-   }
-   ```
-
-## Data Management
-
-### Python Interface
-
-```python
-from google.cloud import storage
-import requests
-import os
-
-def save_training_data_from_remote(remote_url, destination_path):
-    """
-    Save training data from a remote server to GCS.
-
-    Args:
-        remote_url (str): URL of the data on remote server
-        destination_path (str): Path in GCS bucket where data should be stored
-
-    Raises:
-        requests.exceptions.RequestException: If remote download fails
-        google.cloud.exceptions.GoogleCloudError: If GCS upload fails
-    """
-    client = storage.Client()
-    bucket = client.bucket(BUCKET_NAMES['training'])
-
-    # Download from remote server
-    response = requests.get(remote_url, stream=True)
-    response.raise_for_status()
-
-    # Upload directly to GCS
-    blob = bucket.blob(destination_path)
-    blob.upload_from_file(response.raw)
-    print(f"Successfully uploaded to: gs://{BUCKET_NAMES['training']}/{destination_path}")
-
-def save_local_training_data(local_path, destination_path):
-    """
-    Save local training data to GCS.
-
-    Args:
-        local_path (str): Path to local file
-        destination_path (str): Path in GCS bucket
-    """
-    client = storage.Client()
-    bucket = client.bucket(BUCKET_NAMES['training'])
-    blob = bucket.blob(destination_path)
-    blob.upload_from_filename(local_path)
-    print(f"Successfully uploaded to: gs://{BUCKET_NAMES['training']}/{destination_path}")
-
-def load_training_data(destination_path, download_locally=False):
-    """
-    Load training data from GCS.
-
-    Args:
-        destination_path (str): Path in GCS bucket
-        download_locally (bool): If True, downloads to local file
-
-    Returns:
-        Union[bytes, str]: Either the file contents or local file path
-    """
-    client = storage.Client()
-    bucket = client.bucket(BUCKET_NAMES['training'])
-    blob = bucket.blob(destination_path)
-
-    if download_locally:
-        local_path = f'/tmp/{os.path.basename(destination_path)}'
-        blob.download_to_filename(local_path)
-        return local_path
-
-    return blob.download_as_bytes()
-```
-
-### Usage Examples
-
-```python
-# Save data from remote server
-save_training_data_from_remote(
-    'https://remote-server.com/dataset.pkl',
-    'datasets/training/dataset.pkl'
-)
-
-# Save local data
-save_local_training_data(
-    'path/to/local/dataset.pkl',
-    'datasets/training/dataset.pkl'
-)
-
-# Load data (in memory)
-training_data = load_training_data('datasets/training/dataset.pkl')
-
-# Load data (to local file)
-local_file_path = load_training_data('datasets/training/dataset.pkl', download_locally=True)
-```
-
-### Command Line Operations
+1. Initialize the GCP project:
 
 ```bash
-# Download from remote server and upload to GCS
-curl -L "https://remote-server.com/dataset.pkl" | \
-    gsutil cp - gs://sign-lang-training-data-dev/datasets/training/dataset.pkl
-
-# Alternative using wget
-wget -qO- "https://remote-server.com/dataset.pkl" | \
-    gsutil cp - gs://sign-lang-training-data-dev/datasets/training/dataset.pkl
-
-# Upload local files
-gsutil cp ./local_dataset.pkl gs://sign-lang-training-data-dev/datasets/training/dataset.pkl
-
-# Upload multiple files (parallel)
-gsutil -m cp -r ./datasets/*.pkl gs://sign-lang-training-data-dev/datasets/training/
-
-# Download from GCS
-gsutil cp gs://sign-lang-training-data-dev/datasets/training/dataset.pkl ./local_dataset.pkl
-
-# Download directory (parallel)
-gsutil -m cp -r gs://sign-lang-training-data-dev/datasets/training/* ./local_datasets/
+./setup/init-gcp-project.sh
 ```
 
-### Useful Commands
+2. Set up infrastructure:
 
 ```bash
-# List available datasets
-gsutil ls gs://sign-lang-training-data-dev/datasets/training/
-
-# Check file size
-gsutil du -h gs://sign-lang-training-data-dev/datasets/training/dataset.pkl
-
-# Add metadata to uploads
-gsutil -h "Content-Type:application/octet-stream" \
-    cp ./dataset.pkl gs://sign-lang-training-data-dev/datasets/training/
-
-# Check file metadata
-gsutil stat gs://sign-lang-training-data-dev/datasets/training/dataset.pkl
+cd terraform/environments/dev
+terraform init
+terraform plan
+terraform apply
 ```
 
-## Best Practices
+## Development Options
 
-1. **Performance**
+### Local Development
 
-   - Use the `-m` flag for parallel operations with multiple or large files
-   - Stream large files directly instead of loading them into memory
-   - Consider using `gsutil -o GSUtil:parallel_composite_upload_threshold=150M` for large files
+1. **Mock Model** (Default)
 
-2. **Organization**
+```bash
+# Option 1: Default behavior
+python app/main.py
 
-   - Follow the established bucket structure
-   - Use clear, consistent naming conventions
-   - Add appropriate metadata to uploaded files
+# Option 2: Explicit mock configuration
+export USE_MOCK_MODEL=true
+python app/main.py
+```
 
-3. **Security**
+2. **Real Model**
 
-   - Never commit credentials
-   - Use appropriate IAM roles
-   - Regularly rotate service account keys
+```bash
+export USE_MOCK_MODEL=false
+export HUGGINGFACE_TOKEN=your_token_here
+export MODEL_PATH=your-org/sign-language-translator
+python app/main.py
+```
 
-## Troubleshooting
+### Docker Development
 
-Common issues and solutions:
+1. **Mock Model**
 
-- Permission denied: Verify your authentication and IAM roles
-- Timeout errors: Consider using resumable uploads for large files
-- Rate limiting: Implement exponential backoff in your code
+```bash
+docker build -t sign-language-translator ./app
+docker run -p 8080:8080 sign-language-translator
+```
 
-## Support
+2. **Real Model**
 
-For additional help:
+```bash
+docker build -t sign-language-translator ./app
+docker run -p 8080:8080 \
+  -e USE_MOCK_MODEL=false \
+  -e HUGGINGFACE_TOKEN=your_token_here \
+  -e MODEL_PATH=your-org/sign-language-translator \
+  sign-language-translator
+```
 
-- Check [GCS Documentation](https://cloud.google.com/storage/docs)
+## Deployment
+
+### Mock Model Deployment
+
+```hcl
+module "cloudrun" {
+  source      = "../../modules/cloudrun"
+  project_id  = var.project_id
+  region      = var.region
+  environment = "dev"
+
+  env_variables = {
+    USE_MOCK_MODEL = "true"
+  }
+}
+```
+
+### Production Model Deployment
+
+```hcl
+module "cloudrun" {
+  source      = "../../modules/cloudrun"
+  project_id  = var.project_id
+  region      = var.region
+  environment = "dev"
+
+  env_variables = {
+    USE_MOCK_MODEL = "false"
+    MODEL_PATH     = "your-org/sign-language-translator"
+  }
+
+  secrets = {
+    HUGGINGFACE_TOKEN = {
+      secret_id = "huggingface-token-dev"
+      version   = "latest"
+    }
+  }
+}
+```
+
+## Testing the API
+
+1. **Health Check**
+
+```bash
+curl http://localhost:8080/health
+```
+
+2. **Process Video**
+
+```bash
+curl -X POST -F "video=@path/to/your/video.mp4" http://localhost:8080/process-sign-language
+```
+
+## Environment Variables
+
+| Variable          | Description                          | Default                           |
+| ----------------- | ------------------------------------ | --------------------------------- |
+| USE_MOCK_MODEL    | Use mock model instead of real model | true                              |
+| HUGGINGFACE_TOKEN | Token for accessing HF model         | None                              |
+| MODEL_PATH        | Path to HF model                     | your-org/sign-language-translator |
+| PORT              | Port for the application             | 8080                              |
+
+## Infrastructure Components
+
+- Cloud Run service for the application
+- Artifact Registry for container images
+- Secret Manager for Hugging Face token
+- IAM configurations for service accounts
+- Monitoring and alerting setup
