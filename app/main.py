@@ -5,6 +5,9 @@ import os
 from models import load_model_and_processor, ModelLoader
 from utils.keypoint_extraction import KeypointExtractor
 from utils.preprocessing import preprocess_keypoints
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
 

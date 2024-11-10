@@ -27,6 +27,12 @@ sign-language-translator/
 - Python 3.9+
 - Docker
 - (Optional) Hugging Face account and access token for the real model
+- Build essentials (for Linux users):
+
+```bash
+sudo apt-get update
+sudo apt-get install python3-dev build-essential
+```
 
 ## Getting Started
 
@@ -49,7 +55,21 @@ terraform apply
 
 ### Local Development
 
-1. **Mock Model** (Default)
+1. **Install Requirements**
+
+```bash
+# Option A: Recommended - Using Virtual Environment
+# This keeps your project dependencies isolated and prevents conflicts
+python -m venv venv
+source venv/bin/activate  # On Windows: .\venv\Scripts\activate
+pip install -r app/requirements.txt
+
+# Option B: Direct Installation
+# Not recommended but faster for quick testing
+pip install -r app/requirements.txt
+```
+
+2. **Mock Model** (Default)
 
 ```bash
 # Option 1: Default behavior
@@ -60,7 +80,7 @@ export USE_MOCK_MODEL=true
 python app/main.py
 ```
 
-2. **Real Model**
+3. **Real Model**
 
 ```bash
 export USE_MOCK_MODEL=false
@@ -134,14 +154,20 @@ module "cloudrun" {
 1. **Health Check**
 
 ```bash
-curl http://localhost:8080/health
+curl http://localhost:8000/health
 ```
 
 2. **Process Video**
 
 ```bash
-curl -X POST -F "video=@path/to/your/video.mp4" http://localhost:8080/process-sign-language
+# Using your own video
+curl -X POST -F "video=@path/to/your/video.mp4" http://localhost:8000/process-sign-language
+
+# Using the example ASL video
+curl -X POST -F "video=@app/data/samples/asl_example.mp4" http://localhost:8000/process-sign-language
 ```
+
+You can find an example ASL video in the repository at [app/data/samples/asl_example.mp4](https://github.com/opencampus-sh/sign-language-translator/blob/main/app/data/samples/asl_example.mp4). This example video is sourced from [Pexels](https://www.pexels.com/search/videos/sign%20language/), a free stock video platform.
 
 ## Environment Variables
 
@@ -150,7 +176,7 @@ curl -X POST -F "video=@path/to/your/video.mp4" http://localhost:8080/process-si
 | USE_MOCK_MODEL    | Use mock model instead of real model | true                              |
 | HUGGINGFACE_TOKEN | Token for accessing HF model         | None                              |
 | MODEL_PATH        | Path to HF model                     | your-org/sign-language-translator |
-| PORT              | Port for the application             | 8080                              |
+| PORT              | Port for the application             | 8000                              |
 
 ## Infrastructure Components
 
