@@ -1,9 +1,15 @@
 # app/requirements.txt
-flask==2.0.1
-gunicorn==20.1.0
-mediapipe==0.10.0
-numpy==1.21.0
-opencv-python-headless==4.5.3.56
-torch==2.0.0
-transformers==4.30.0  # For your fine-tuned Whisper model
-python-multipart==0.0.6  # For handling file uploads
+# Web framework and server
+flask~=3.0.0          # Python web framework for building the API
+gunicorn~=23.0.0      # Production-grade WSGI HTTP Server
+
+# Computer vision and ML
+mediapipe~=0.10.0     # Google's ML framework for pose/hand tracking and gesture recognition
+numpy~=1.24.0         # Numerical computing library, required by most ML packages
+opencv-python-headless~=4.10.0  # Computer vision library (headless = no GUI dependencies)
+torch<2.2.0          # PyTorch deep learning framework for neural networks
+transformers~=4.46.0  # Hugging Face Transformers for ML models (used for Whisper)
+ml-dtypes~=0.3.1     # ML data types (adding explicit version for TensorFlow compatibility)
+
+# Utilities
+python-multipart~=0.0.17  # Handles file uploads in Flask (particularly for video/audio files)
