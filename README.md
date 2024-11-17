@@ -91,6 +91,15 @@ python app/scripts/dev_model_deploy.py --project-id=your-project-id
 flask run --debug
 ```
 
+### VS Code Setup
+
+1. Install recommended extensions when prompted by VS Code
+2. Sign in to GitHub when prompted by the GitHub Pull Requests and Issues extension
+3. Workspace settings will automatically configure:
+   - Standardized branch naming for issues
+   - GitHub issue integration
+   - Pull request management
+
 ## Deployment Scenarios
 
 ### Development

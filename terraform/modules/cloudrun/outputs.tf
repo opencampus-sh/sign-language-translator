@@ -12,8 +12,3 @@ output "service_url" {
   value       = google_cloud_run_service.translator_service.status[0].url
   description = "URL of the deployed Cloud Run service"
 }
-
-output "repository_url" {
-  value       = google_artifact_registry_repository.translator_repo.name
-  description = "URL of the Artifact Registry repository"
-}

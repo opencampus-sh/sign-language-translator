@@ -1,0 +1,4 @@
+{
+    "githubIssues.issueBranchTitle": "${issueNumber}/${sanitizedIssueTitle}",
+    "githubIssues.useBranchForIssues": "on",
+} 
