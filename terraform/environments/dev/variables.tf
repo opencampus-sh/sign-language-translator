@@ -1,18 +1,31 @@
 # terraform/environments/dev/variables.tf
 variable "project_id" {
-  type        = string
   description = "The GCP project ID"
+  type        = string
 }
 
 variable "region" {
-  type        = string
   description = "The default GCP region"
+  type        = string
+  default     = "europe-west3"
 }
 
 variable "environment" {
+  description = "Environment name (dev, staging, prod)"
   type        = string
-  description = "Environment name (dev, prod, etc.)"
   default     = "dev"
+}
+
+variable "model_version" {
+  description = "Version of the model to deploy"
+  type        = string
+  default     = "latest" # Default for development
+}
+
+variable "model_path" {
+  description = "Path to the model artifacts in GCS"
+  type        = string
+  default     = "models/dev-latest" # Default development model path
 }
 
 variable "github_owner" {
@@ -23,21 +36,22 @@ variable "github_owner" {
 variable "branch_name" {
   description = "Branch name to trigger builds from"
   type        = string
-}
-
-variable "notification_email" {
-  type        = string
-  description = "Email address for monitoring notifications"
+  default     = "main"
 }
 
 variable "cloudrun_memory_limit" {
-  type        = string
   description = "Memory limit for Cloud Run service"
+  type        = string
   default     = "2Gi"
 }
 
 variable "cloudrun_cpu_limit" {
-  type        = string
   description = "CPU limit for Cloud Run service"
+  type        = string
   default     = "1000m"
+}
+
+variable "notification_email" {
+  description = "Email address for monitoring notifications"
+  type        = string
 }

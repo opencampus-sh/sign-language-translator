@@ -10,7 +10,7 @@ resource "google_cloudbuild_trigger" "translator_build" {
     }
   }
 
-  filename = "build/cloudbuild.yaml"
+  filename = "cloud-build/cloudbuild.yaml"
 
   substitutions = {
     _REGION          = var.region

@@ -20,13 +20,34 @@ module "iam" {
   source      = "../../modules/iam"
   project_id  = var.project_id
   environment = "dev"
-  # Add these required parameters
-  region                 = var.region
-  cloud_run_service_name = module.cloudrun.service_name
+  region      = var.region
 
   depends_on = [
     module.project,
-    module.cloudrun
+    module.vertex_ai
+  ]
+}
+
+module "vertex_ai" {
+  source = "../../modules/vertex_ai"
+
+  project_id    = var.project_id
+  environment   = "dev"
+  region        = var.region
+  model_version = var.model_version
+  model_path    = "gs://${module.storage.training_data_bucket}/${var.model_version}"
+
+  # Development-specific configurations
+  machine_type        = "n1-standard-2"
+  min_replicas        = 1
+  max_replicas        = 1
+  accelerator_type    = null # No GPU for dev
+  accelerator_count   = 0
+  container_image_uri = "europe-docker.pkg.dev/vertex-ai/prediction/pytorch-cpu.1-13:latest"
+
+  depends_on = [
+    module.project,
+    module.storage
   ]
 }
 
@@ -35,29 +56,18 @@ module "monitoring" {
 
   project_id  = var.project_id
   environment = "dev"
-  storage_buckets = [
-    module.storage.training_data_bucket,
-  ]
-  notification_email = var.notification_email
-  depends_on         = [module.project]
-}
 
-module "cloudrun" {
-  source          = "../../modules/cloudrun"
-  project_id      = var.project_id
-  region          = var.region
-  environment     = "dev"
-  repository_name = "sign-language-translator" # Should match your Artifact Registry repository name
+  # Monitor Vertex AI endpoint
+  vertex_ai_endpoint_id = module.vertex_ai.endpoint_id
+  vertex_ai_model_id    = module.vertex_ai.model_id
 
-  service_name = "sign-language-translator"
-  memory_limit = "2Gi"
-  cpu_limit    = "1000m"
-  github_owner = var.github_owner
-  branch_name  = var.branch_name
+  # Basic alerts for development
+  alert_thresholds = {
+    latency_threshold    = 1000 # 1 second
+    error_rate_threshold = 0.05 # 5% error rate
+  }
 
-  depends_on = [
-    module.project,
-    module.iam,
-    module.storage
-  ]
+  notification_email = var.notification_email # Optional for dev, but good for debugging
+
+  depends_on = [module.project, module.vertex_ai]
 }
