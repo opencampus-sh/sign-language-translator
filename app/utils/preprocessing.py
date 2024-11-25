@@ -2,6 +2,7 @@
 import numpy as np
 import torch
 from typing import List, Dict, Union, Tuple
+import logging
 
 def preprocess_keypoints(keypoints_sequence: List[Dict]) -> torch.Tensor:
     """
@@ -15,42 +16,49 @@ def preprocess_keypoints(keypoints_sequence: List[Dict]) -> torch.Tensor:
         torch.Tensor: Preprocessed keypoints in the format expected by the model
         Shape: (1, sequence_length, feature_dimension)
     """
+    logger = logging.getLogger(__name__)
+    
+    logger.debug(f"Input keypoints sequence length: {len(keypoints_sequence)}")
     processed_frames = []
     
-    for frame_data in keypoints_sequence:
+    for i, frame_data in enumerate(keypoints_sequence):
         frame_features = []
         
-        # Process hand landmarks
+        # Log frame data structure
+        logger.debug(f"Frame {i} data keys: {frame_data.keys()}")
+        logger.debug(f"Number of hands: {len(frame_data['hand_landmarks'])}")
+        if frame_data['face_landmarks']:
+            logger.debug(f"Number of face landmarks: {len(frame_data['face_landmarks'][0])}")
+        
+        # Process hands
         hand_landmarks = frame_data['hand_landmarks']
-        # Handle up to 2 hands
-        for i in range(2):
-            if i < len(hand_landmarks):
-                # Each hand has 21 landmarks with 3 coordinates (x, y, z)
-                hand_points = hand_landmarks[i]
-                frame_features.extend([coord for point in hand_points for coord in point])
+        for hand_idx in range(2):
+            if hand_idx < len(hand_landmarks):
+                points = hand_landmarks[hand_idx][:21]
+                logger.debug(f"Hand {hand_idx} points shape: {len(points)}x{len(points[0])}")
+                frame_features.extend([coord for point in points for coord in point])
             else:
-                # Pad with zeros if hand is missing
                 frame_features.extend([0.0] * (21 * 3))
         
-        # Process face landmarks
+        # Process face
         face_landmarks = frame_data['face_landmarks']
-        if face_landmarks:
-            # Take the first face if multiple are detected
-            face_points = face_landmarks[0]
-            # MediaPipe face mesh has 468 landmarks with 3 coordinates each
+        if face_landmarks and len(face_landmarks) > 0:
+            face_points = face_landmarks[0][:468]
+            logger.debug(f"Face points shape: {len(face_points)}x{len(face_points[0])}")
             frame_features.extend([coord for point in face_points for coord in point])
         else:
-            # Pad with zeros if no face is detected
             frame_features.extend([0.0] * (468 * 3))
         
+        logger.debug(f"Frame {i} features length: {len(frame_features)}")
         processed_frames.append(frame_features)
     
-    # Convert to tensor and add batch dimension
-    # Shape: (1, sequence_length, n_features)
+    # Convert to tensor and log shapes
     tensor_data = torch.tensor(processed_frames, dtype=torch.float32)
+    logger.debug(f"Tensor shape before normalization: {tensor_data.shape}")
     
-    # Normalize the coordinates
+    # Normalize and log final shape
     tensor_data = normalize_keypoints(tensor_data)
+    logger.debug(f"Tensor shape after normalization: {tensor_data.shape}")
     
     return tensor_data.unsqueeze(0)
 
@@ -64,24 +72,30 @@ def normalize_keypoints(keypoints: torch.Tensor) -> torch.Tensor:
     Returns:
         torch.Tensor: Normalized keypoints
     """
+    # Reshape the keypoints to separate the coordinates
+    # Original shape: (sequence_length, feature_dimension)
+    # New shape: (sequence_length * n_points, 3)
+    reshaped = keypoints.reshape(-1, 3)
+    
     # Find min and max values for each coordinate across all frames
     # Skip zero-padded values in the calculation
-    mask = keypoints != 0
+    mask = reshaped != 0
     if not mask.any():
         return keypoints
     
-    min_vals = keypoints[mask].reshape(-1, 3).min(dim=0)[0]
-    max_vals = keypoints[mask].reshape(-1, 3).max(dim=0)[0]
+    min_vals = reshaped[mask].min(dim=0)[0]
+    max_vals = reshaped[mask].max(dim=0)[0]
     
     # Avoid division by zero
     range_vals = max_vals - min_vals
     range_vals[range_vals == 0] = 1.0
     
     # Normalize non-zero values to [-1, 1]
-    normalized = keypoints.clone()
-    normalized[mask] = 2 * (keypoints[mask] - min_vals.reshape(-1, 3)) / range_vals.reshape(-1, 3) - 1
+    normalized = reshaped.clone()
+    normalized[mask] = 2 * (reshaped[mask] - min_vals) / range_vals - 1
     
-    return normalized
+    # Reshape back to original dimensions
+    return normalized.reshape(keypoints.shape)
 
 def get_feature_dimension() -> int:
     """
