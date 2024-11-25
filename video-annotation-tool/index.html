@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Annotation Tool with Dynamic URL Loading</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div id="videoLoader" class="video-loader">
+            <!-- Displayed only when no video URL is provided -->
+            <input type="text" id="videoUrlInput" placeholder="Geben Sie die Video-URL ein" />
+            <button id="loadVideoButton">Video Laden</button>
+        </div>
+        <video id="video" controls style="display:none;">
+            Ihr Browser unterstützt das Video-Tag nicht.
+        </video>
+        <div id="controls" class="controls" style="display:none;">
+            <button id="markButton">Markiere Zeitpunkt</button>
+            <button id="removeButton">Entferne letzten Timestamp</button>
+            <button id="saveButton">Speichere JSON</button>
+            <button id="speedButton">1.0x</button>
+        </div>
+        <div id="timestampList" class="timestamp-list">
+            <!-- Timestamps will be appended here -->
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
