@@ -4,21 +4,18 @@ from config.settings import CHAT_SETTINGS
 
 
 def send_message_from_sign_language(message, history):
-    """Fügt eine neue Nachricht von der Gebärdensprach-Seite hinzu"""
     if message:
         history.append({"role": "user", "content": message})
         return "", history
 
 
 def send_message_from_other(message, history):
-    """Fügt eine neue Nachricht von der anderen Seite hinzu"""
     if message:
         history.append({"role": "assistant", "content": message})
         return "", history
 
 
 def update_button_state(text):
-    """Aktualisiert den Button-Status basierend auf Texteingabe"""
     return gr.update(interactive=bool(text.strip()))
 
 
@@ -41,7 +38,7 @@ def create_chat_component():
             )
 
         # Debug Accordion
-        with gr.Accordion("Debug-Bereich", open=False):
+        with gr.Accordion("Debug Area", open=False):
             # Gebärdensprache Input
             with gr.Row():
                 sign_input = gr.Textbox(

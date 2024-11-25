@@ -142,6 +142,17 @@ def create_webcam_component():
             visible=True
         )
 
+        status_text = gr.Textbox(label="Recording Status", interactive=False)
+
+    with gr.Accordion("Debug Area", open=False) as debug_area:
+
+        # with gr.Row():
+        #     csv_output_live = gr.File(
+        #         label="Recorded landmark Data (CSV)",
+        #         interactive=False,
+        #         file_types=[".csv"]
+        #     )
+        #with gr.Row():
         processed_video = gr.Image(
             height=WEBCAM_SETTINGS['height'],
             label=WEBCAM_SETTINGS['label'],
@@ -149,17 +160,6 @@ def create_webcam_component():
             visible=True
         )
 
-        status_text = gr.Textbox(label="Recording Status", interactive=False)
-
-    with gr.Accordion("Debug Area", open=False) as debug_area:
-
-        # with gr.Row():
-        #     csv_output_live = gr.File(
-        #         label="Recorded Keypoint Data (CSV)",
-        #         interactive=False,
-        #         file_types=[".csv"]
-        #     )
-        #with gr.Row():
         recording_frames_csv = gr.File(
             label="Download CSV",
             file_count="single",
@@ -167,7 +167,7 @@ def create_webcam_component():
             interactive=False,
         )
         recording_frames_output = gr.DataFrame(
-            label="Recorded Keypoint Data",
+            label="Recorded Landmark Data",
             headers=["frame", "timestamp", "landmarks"],
             datatype=["number", "number", "str"],
             col_count=(3, "fixed"),
