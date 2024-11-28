@@ -1,0 +1,36 @@
+name: Model Deployment
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "terraform/environments/staging/**"
+      - "models/**" # Optional: if you want to trigger on model changes too
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: ${{ steps.deployment.outputs.url }}
+
+    # Additional protection
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - id: "auth"
+        uses: "google-github-actions/auth@v1"
+        with:
+          credentials_json: "${{ secrets.GCP_SA_KEY }}"
+
+      - name: "Set up Cloud SDK"
+        uses: "google-github-actions/setup-gcloud@v1"
+
+      - name: "Deploy to staging"
+        run: |
+          gcloud builds submit \
+            --config=cloud-build/model-deployment.yaml \
+            --substitutions=_ENVIRONMENT=staging,_MODEL_VERSION=${GITHUB_REF#refs/tags/model/},_MODEL_PATH=${{ secrets.MODEL_PATH }},_BUCKET_NAME=${{ secrets.STAGING_BUCKET }}
