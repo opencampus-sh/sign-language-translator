@@ -3,7 +3,7 @@ name: Model Deployment
 on:
   push:
     branches:
-      - main
+      - staging
     paths:
       - "terraform/environments/staging/**"
       - "models/**" # Optional: if you want to trigger on model changes too
