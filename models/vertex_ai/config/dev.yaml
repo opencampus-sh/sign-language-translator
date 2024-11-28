@@ -1,0 +1,10 @@
+# config/environments/dev.yaml
+environment: "dev"
+
+project:
+  project_id: "sign-lang-translator-20241029"
+  region: "europe-west3"
+
+vertex_ai:
+  endpoint_name: "vertex-ai" # default value in the terraform deployment
+  # If several endpoints are deployed, a specific endpoint name might have to be defined.
