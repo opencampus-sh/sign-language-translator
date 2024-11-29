@@ -1,3 +1,6 @@
+# Our Vision
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/G_gqPeHtsns/0.jpg)](https://www.youtube.com/watch?v=G_gqPeHtsns)
+
 # Sign Language Translator
 
 This project provides a sign language translation service using MediaPipe for keypoint extraction and a fine-tuned Whisper model deployed on Vertex AI. The service is deployed on Google Cloud Run and managed with Terraform.
