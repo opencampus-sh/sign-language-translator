@@ -1,5 +1,14 @@
-# Our Vision
+# Our Grand Vision
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/G_gqPeHtsns/0.jpg)](https://www.youtube.com/watch?v=G_gqPeHtsns)
+
+
+https://github.com/user-attachments/assets/25741ed1-ce6a-42b3-a297-1f8de950f741
+
+
+# Our Intermediate Version for End of January 2025
+https://youtu.be/hfL8fyKjCU0
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/G_gqPeHtsns/0.jpg)](https://www.youtube.com/watch?v=G_gqPeHtsns)
+
 
 # Sign Language Translator
 
