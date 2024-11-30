@@ -1,0 +1,50 @@
+steps:
+  # Build the custom predictor container
+  - name: "gcr.io/cloud-builders/docker"
+    args: [
+        "build",
+        "-t",
+        "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE}:${_TAG}",
+        "--build-arg",
+        "HF_TASK=${_HF_TASK}",
+        "--platform=linux/amd64",
+        "--file",
+        "./models/huggingface_model/docker/Dockerfile", # Updated path
+        "./models/huggingface_model/docker", # Updated path
+      ]
+
+  # Push the container image
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "push",
+        "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE}:${_TAG}",
+      ]
+
+  # Download and package the Hugging Face model
+  - name: "python:3.9"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        pip install transformers torch
+        python -c "
+        from transformers import AutoModel, AutoTokenizer
+        model = AutoModel.from_pretrained('${_HF_MODEL_ID}')
+        tokenizer = AutoTokenizer.from_pretrained('${_HF_MODEL_ID}')
+        model.save_pretrained('/workspace/model')
+        tokenizer.save_pretrained('/workspace/model')
+        "
+        cd /workspace/model
+        tar zcvf model.tar.gz *
+        gsutil cp model.tar.gz gs://${_BUCKET_NAME}/${_MODEL_VERSION}/
+
+substitutions:
+  _REGION: "europe-west3"
+  _REPOSITORY: "translator-models"
+  _IMAGE: "hf-predictor"
+  _TAG: "latest"
+  _HF_TASK: "automatic-speech-recognition"
+  _HF_MODEL_ID: ""
+  _BUCKET_NAME: ""
+  _MODEL_VERSION: "v1"

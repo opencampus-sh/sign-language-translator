@@ -1,13 +1,15 @@
+# Our Grand Vision
+https://github.com/user-attachments/assets/25741ed1-ce6a-42b3-a297-1f8de950f741
+
+
+# Our Intermediate Version for End of January 2025
+https://github.com/user-attachments/assets/37a38a94-b832-4600-ba67-3f1fd02adaae
+
+
+
 # Sign Language Translator
 
 This project provides a sign language translation service using MediaPipe for keypoint extraction and a fine-tuned Whisper model deployed on Vertex AI. The service is deployed on Google Cloud Run and managed with Terraform.
-
-## Documentation
-
-- [Data Access and Dataset Information](app/docs/DATA.md)
-- [Model Training Guide](app/docs/TRAINING.md)
-- [Deployment Scenarios](app/docs/DEPLOYMENT.md)
-- [GCP Project Setup Guide](app/docs/GCP_SETUP.md)
 
 ## Project Structure
 
@@ -15,14 +17,47 @@ This project provides a sign language translation service using MediaPipe for ke
 sign-language-translator/
 ├── app/ # Application code
 │ ├── config/ # Configuration files
+│ ├── data/ # Data files
 │ ├── models/ # Model implementations
-│ ├── scripts/ # Utility scripts
 │ └── utils/ # Helper functions
-├── terraform/ # Infrastructure as Code
-│ ├── environments/ # Environment-specific configs
-│ └── modules/ # Reusable Terraform modules
-├── cloud-build/ # Cloud Build configurations
-└── setup/ # Setup scripts
+└── infrastructure/ # Deployment code
+  ├── terraform/ # Infrastructure as Code
+  │ ├── environments/ # Environment-specific configs
+  │ └── modules/ # Reusable Terraform modules
+  └── cloud-build/ # Cloud Build configurations
+
+
+sign-language-translator/
+├── app/                            # Your application code
+│   ├── config/                     # Application configuration
+│   ├── data/                       # Application data
+│   └── scripts/                    # Application-specific scripts
+├── infrastructure/                 # Infrastructure as code
+│   └── terraform/
+│       ├── environments/
+│       │   └── dev/
+│       │       └── main.tf         # Environment configuration
+│       ├── modules/
+│       │   ├── monitoring/         # Monitoring module
+│       │   └── vertex_ai/          # Vertex AI module
+│       │       ├── main.tf         # Core Vertex AI resources
+│       │       ├── variables.tf    # Module variables
+│       │       └── outputs.tf      # Module outputs
+│       └── terraform.tfvars
+├── models/                         # ML models as a top-level concern
+│   └── huggingface_model/          # Specific model implementation
+│       ├── cloudbuild/             # Cloud Build configurations for
+│       │   └── cloudbuild.yaml     #    automatic deployment to staging and
+│       ├── docker/
+│       │   ├── Dockerfile         # Prediction routine container
+│       │   ├── predictor.py       # Prediction code
+│       │   └── requirements.txt   # Model dependencies
+│       ├── scripts/               # For manual deployment in development environment
+│       │   ├── build_and_push.py  # Docker image management
+│       │   ├── download_model.py  # Model preparation
+│       │   └── deploy_model.py    # Model deployment
+│       └── README.md              # Model-specific documentation
+└── README.md
 ```
 
 ## Prerequisites
@@ -65,6 +100,8 @@ Required environment variables:
 # Clone the repository
 git clone https://github.com/your-org/sign-language-translator.git
 cd sign-language-translator
+# Make the setup script executable
+chmod +x setup/setup_dev_env.sh
 # Run the development setup script
 ./setup/setup_dev_env.sh
 ```
@@ -74,24 +111,23 @@ cd sign-language-translator
 ```bash
 # For offline development (using mock model)
 export USE_MOCK_MODEL=true
+
 # For online development (using Vertex AI)
 export USE_MOCK_MODEL=false
-export VERTEX_AI_ENDPOINT_ID=<your-endpoint-id>
+export VERTEX_AI_ENDPOINT_ID=<endpoint-id-from-previous-step>
 ```
 
-3. Deploy a development model (if using Vertex AI):
+If you want to have access to a Vertex AI endpoint to contribute to the project, contact the project maintainers.
+
+3. Start the development app:
 
 ```bash
-python app/scripts/dev_model_deploy.py --project-id=your-project-id
+python app/main.py
 ```
 
-4. Start the development server:
+You can find an example ASL video in the repository at [app/data/samples/asl_example.mp4](https://github.com/opencampus-sh/sign-language-translator/blob/main/app/data/samples/asl_example.mp4). This example video is sourced from [Pexels](https://www.pexels.com/search/videos/sign%20language/), a free stock video platform.
 
-```bash
-flask run --debug
-```
-
-### VS Code Setup
+## VS Code Setup
 
 1. Install recommended extensions when prompted by VS Code
 2. Sign in to GitHub when prompted by the GitHub Pull Requests and Issues extension
@@ -100,127 +136,17 @@ flask run --debug
    - GitHub issue integration
    - Pull request management
 
-## Deployment Scenarios
-
-### Development
-
-- Uses CPU-only resources
-- Single replica deployment
-- Mock model available for offline development
-- Minimal compute resources for cost optimization
-
-### Staging
-
-- GPU-enabled endpoints
-- Automated deployment via GitHub Actions
-- Integration testing before promotion
-- Scaled-down production configuration
-
-### Production
-
-- Full GPU resources
-- Multiple replicas for high availability
-- Automated canary deployments
-- Full monitoring and alerting
-
-## Model Deployment
-
-### Development
-
-```bash
-# Deploy development model
-python app/scripts/dev_model_deploy.py --project-id=your-project-id
-```
-
-### Staging/Production
-
-```bash
-# Tag a new model version
-git tag model/v1.0.0
-git push origin model/v1.0.0
-# GitHub Actions will automatically:
-# 1. Deploy to staging
-# 2. Run validation tests
-# 3. Deploy to production if tests pass
-```
-
-## Infrastructure Setup
-
-1. Copy the example variables file:
-
-```bash
-cd terraform/environments/dev
-cp example.tfvars terraform.tfvars
-```
-
-2. Edit terraform.tfvars with your values
-
-```hcl
-project_id = "your-project-id"
-region = "europe-west3"
-```
-
-3. Initialize and apply Terraform:
-
-```bash
-terraform init
-terraform apply
-```
-
-## Monitoring Setup
-
-The project includes monitoring configurations for different environments:
-
-### Development
-
-- Basic resource monitoring
-- Error rate tracking
-- Performance metrics
-
-### Production
-
-- Full monitoring suite
-- Custom alerts
-- Uptime checks
-- Error tracking
-- Performance monitoring
-
-Configure monitoring by setting up notification channels:
-
-```bash
-cd terraform/environments/[env]
-terraform apply -var="notification_email=your-email@domain.com"
-```
-
-## Troubleshooting
-
-Common issues and solutions:
-
-1. **Permission Issues**
-
-   - Verify your GCP credentials are properly set up
-   - Ensure you have the required IAM roles
-   - Check project permissions
-
-2. **Deployment Failures**
-
-   - Verify your terraform.tfvars configuration
-   - Check Cloud Build logs
-   - Ensure service account has necessary permissions
-
-3. **Model Issues**
-   - For mock model: Verify USE_MOCK_MODEL=true
-   - For Vertex AI: Check endpoint ID and permissions
-
 ## Contributing
 
-1. Create a feature branch:
+1. Create a fork of the repository
+
+2. Create a feature branch:
 
 ```bash
 git checkout -b feature/your-feature-name
 ```
 
-2. Make your changes and test:
+3. Make your changes and test:
 
 ```bash
 # Run tests
@@ -241,4 +167,4 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 
 For support and questions:
 
-- Create an issue in the GitHub repository
+- Create an issue [here](https://github.com/opencampus-sh/sign-language-translator/issues)

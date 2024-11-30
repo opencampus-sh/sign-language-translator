@@ -1,0 +1,26 @@
+{
+    "architectures": [
+      "MockWhisperForSignLanguage"
+    ],
+    "model_type": "whisper",
+    "is_mock": true,
+    "feature_size": 1554,
+    "num_hidden_layers": 2,
+    "hidden_size": 128,
+    "intermediate_size": 512,
+    "num_attention_heads": 4,
+    "vocab_size": 5,
+    "max_position_embeddings": 512,
+    "mock_responses": {
+      "0": "Hello! Nice to meet you.",
+      "1": "Thank you very much!",
+      "2": "Goodbye, see you later!",
+      "3": "How are you?",
+      "4": "My name is John."
+    },
+    "pad_token_id": 0,
+    "bos_token_id": 1,
+    "eos_token_id": 2,
+    "_name_or_path": "mock_whisper",
+    "transformers_version": "4.30.0"
+}
