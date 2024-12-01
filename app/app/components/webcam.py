@@ -5,7 +5,7 @@ import pandas as pd
 import tempfile
 from threading import Lock
 from config.settings import WEBCAM_SETTINGS
-from app.components.mediapipe_model import PoseDetector
+from app.models.mediapipe_model import PoseDetector
 
 # Global variables initialized with default values
 processed_csv_path = None

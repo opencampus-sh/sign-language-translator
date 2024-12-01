@@ -1,14 +1,21 @@
-# environment.yml
 name: sign_language_chat
 channels:
+  - pytorch
   - conda-forge
   - defaults
 dependencies:
   - python=3.10
   - pip
-  - numpy>=1.21.0
+  - numpy>=1.24.0,<1.27.0
   - opencv
   - pillow>=9.0.0
+  - transformers
+  - pytorch>=2.0.0
+  - torchvision
+  - torchaudio
+  - pysoundfile
+  - ffmpeg
   - pip:
     - mediapipe
     - gradio>=5.6.0
+    - openai-whisper

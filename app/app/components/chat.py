@@ -1,6 +1,7 @@
 # app/components/chat.py
 import gradio as gr
 from config.settings import CHAT_SETTINGS
+from app.models.voicetospeech_model import transcribe
 
 
 def send_message_from_sign_language(message, history):
@@ -19,6 +20,25 @@ def update_button_state(text):
     return gr.update(interactive=bool(text.strip()))
 
 
+def process_audio(audio, history):
+    """Verarbeitet Audio-Eingabe und fügt sie zum Chat hinzu"""
+    if audio is None:
+        return history
+
+    try:
+        # Audio ist ein Tupel (sample_rate, audio_data)
+        sample_rate = audio[0]
+        audio_data = audio[1]
+
+        text = transcribe(audio)
+        if text and text.strip():  # Nur nicht-leere Transkriptionen hinzufügen
+            history.append({"role": "user", "content": text})
+        return history
+    except Exception as e:
+        history.append({"role": "system", "content": f"Fehler bei der Transkription: {str(e)}"})
+        return history
+
+
 def create_chat_component():
     with gr.Column():
         # Chat Verlauf
@@ -35,6 +55,16 @@ def create_chat_component():
                 show_copy_button=False,
                 show_share_button=False,
                 bubble_full_width=False
+            )
+
+            # Audio-Eingabe
+            audio_input = gr.Audio(
+                sources=["microphone", "upload"],
+                type="numpy",
+                label="Spracheingabe",
+                streaming=False,
+                format="wav",
+                show_download_button=False,
             )
 
         # Debug Accordion
@@ -61,7 +91,14 @@ def create_chat_component():
                 )
                 other_send = gr.Button("Senden", scale=1, interactive=False, variant="primary")
 
-        # Event Handler
+        # Event Handler für Audio
+        audio_input.change(
+            fn=process_audio,
+            inputs=[audio_input, chat_history],
+            outputs=[chat_history]
+        )
+
+        # Bestehende Event Handler
         sign_send.click(
             fn=send_message_from_sign_language,
             inputs=[sign_input, chat_history],
@@ -74,7 +111,6 @@ def create_chat_component():
             outputs=[other_input, chat_history]
         )
 
-        # Enter-Taste Handler
         sign_input.submit(
             fn=send_message_from_sign_language,
             inputs=[sign_input, chat_history],
@@ -99,4 +135,4 @@ def create_chat_component():
             outputs=[other_send]
         )
 
-        return chat_history, sign_input, sign_send, other_input, other_send
+        return chat_history, audio_input, sign_input, sign_send, other_input, other_send
