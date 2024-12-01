@@ -1,9 +1,27 @@
-# Our Grand Vision
+# Unsere große Vision
+Wir möchten mehr als nur Sprachbarrieren überwinden. Wir möchten das Menschen mit unserer Technologie so angenehm wie möglich miteinander kommunizieren. Als Open-Source Projekt geht es uns darum gemeinnützig eine Software zu entwickeln, die als Schnittstelle zwischen Gehörlosen und Hörenden dient. Sofern möglich, streben wir deshalb an, Gebärden in Echtzeit zu verbalisieren und gleichzeitig das gesprochene des Gesprächspartners wieder mit animierten gebärdenden Avataren zu übersetzen, die durch eine AR-Brille ins Sichtfeld der Gehörlosen Person prohiziert werden. So soll es möglich werden, dass Menschen in Ihrer bevorzugten Sprache mit einander kommunizieren, während unsere KI die Brücke zwischen den Sprachen baut.
 https://github.com/user-attachments/assets/25741ed1-ce6a-42b3-a297-1f8de950f741
 
-
-# Our Intermediate Version for End of January 2025
+# Unsere Vision für den ersten Prototypen Ende Januar 2025
+Um unserer großen Vision einen Schritt näher zu kommen, planen wir für Ende Januar 2025 eine erste KI zu trainieren, die die Gebärden mit so geringer Verzögerung wie möglich transkribiert und verbalisiert. Diese KI soll zunächst in einer Web-APP integriert werden. Diese App sollen Nutzer über unsere kommende Internetseite aufrufen können. Dort werden Sie zunächst darum gebeten Ihre Kamera freizugeben, damit unsere KI Ihre Gebärden analysieren und transkribieren kann. Die transkribierten Gebärden werden dann auch durch Text-to-Speech Software verbalisiert und über die Lautsprecher ihres Notebooks wiedergegeben damit andere Personen Ihre Gebärden hören können. Auf das gehörte kann dann geantwortet werden und Sie sehen was gesagt wird durch die Implementierung einer Speech-to-Text KI. So soll unsere Web-APP zunächst ermöglichen, dass Gebärden und Gesprochenes als Textnachrichten in einem Chat Fenster automatisch protokolliert und für die hörende Person zusätzlich vorgelesen werden. 
 https://github.com/user-attachments/assets/37a38a94-b832-4600-ba67-3f1fd02adaae
+
+# Unser Team 
+Wir sind Christoph, Emel, Henner, Henrik, Jeremy, Kaan und Steffen.  
+Falls dich das Thema begeistert, dann schreibe uns gerne eine Nachricht. 
+Wir freuen uns immer über Verstärkung. Zurzeit freuen wir uns am meisten über Personen, die uns unterstüzen bei
+- Datenvorverarbeitung 
+- Programmieren 
+- Testen
+- Evaluieren
+
+# Unser Vorgehen
+Damit wir schaffen, was wir uns vorgenommen haben arbeiten wir strukturiert. Wir treffen uns wöchentlich und verfolgen einen konkreten Projektplan.
+Technisch unterteilt sich unsere Arbeit in die:
+- Vorverarbeitung von Videos mit Gebärdendolmetschern
+- Training des KI Modells Whisper Large
+- Entwickeln der Nutzeroberfläche
+- Bereitstellung und Einbindung der KI-komponenten 
 
 
 
