@@ -69,3 +69,86 @@ resource "google_storage_bucket_iam_member" "vertex_ai_bucket_access" {
     }
   }
 }
+
+# Create GitHub connection
+resource "google_cloudbuildv2_connection" "github_connection" {
+  project  = var.project_id
+  location = var.region
+  name     = "${var.environment}-github-connection"
+
+  github_config {
+    app_installation_id = var.github_app_installation_id
+    authorizer_credential {
+      oauth_token_secret_version = github_token_secret_version.id
+    }
+  }
+  depends_on = [github_token_secret_version]
+}
+
+resource "google_cloudbuildv2_repository" "github_repo" {
+  project           = var.project_id
+  location          = var.region
+  name              = var.github_repo
+  parent_connection = google_cloudbuildv2_connection.github_connection.name
+  remote_uri        = "https://github.com/${var.github_owner}/${var.github_repo}.git"
+}
+
+# Manual trigger (can be executed via gcloud)
+resource "google_cloudbuild_trigger" "model_deployment_manual" {
+  name = "${var.environment}-${var.endpoint_name}-deploy"
+
+  source_to_build {
+    repository = google_cloudbuildv2_repository.github_repo.id
+    ref        = "refs/heads/main"
+    repo_type  = "GITHUB"
+  }
+
+  git_file_source {
+    path      = "models/types/huggingface/cloud-build/cloudbuild.yaml"
+    uri       = "https://github.com/${var.github_owner}/${var.github_repo}"
+    repo_type = "GITHUB"
+  }
+
+  substitutions = {
+    _ENVIRONMENT   = var.environment
+    _MODEL_ID      = var.model_id
+    _MODEL_VERSION = var.model_version
+    _HF_TASK       = var.hf_task
+    _REGION        = var.region
+    _ENDPOINT      = google_vertex_ai_endpoint.model_endpoint.name
+  }
+}
+
+
+# Add Cloud Build triggers for model deployment
+# Automatic trigger on main branch pushes
+# resource "google_cloudbuild_trigger" "model_deployment_auto" {
+#   name        = "${var.environment}-${var.endpoint_name}-deploy-auto"
+#   description = "Automatic trigger for model deployment on main branch pushes"
+#   location    = var.region
+#   project     = var.project_id
+
+#   github {
+#     owner = var.github_owner
+#     name  = var.github_repo
+#     push {
+#       branch = "^main$"
+#     }
+#   }
+
+#   included_files = [
+#     "models/types/huggingface/**"
+#   ]
+
+#   filename = "models/types/huggingface/cloud-build/cloudbuild.yaml"
+
+#   substitutions = {
+#     _ENVIRONMENT = var.environment
+#     _MODEL_ID    = var.model_id
+#     _MODEL_VERSION = var.model_version
+#     _HF_TASK     = var.hf_task
+#     _REGION      = var.region
+#     _ENDPOINT    = google_vertex_ai_endpoint.model_endpoint.name
+#   }
+# }
+# Create GitHub connection

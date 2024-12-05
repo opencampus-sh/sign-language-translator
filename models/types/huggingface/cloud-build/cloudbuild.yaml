@@ -1,50 +1,71 @@
 steps:
-  # Build the custom predictor container
+  # Download and package model
+  - name: "python:3.10"
+    entrypoint: pip
+    args: ["install", "-r", "models/types/huggingface/requirements.txt"]
+
+  - name: "python:3.10"
+    entrypoint: python
+    args:
+      - -c
+      - |
+        from transformers import AutoModel, AutoTokenizer
+        import tarfile, os
+
+        model = AutoModel.from_pretrained('${_MODEL_ID}')
+        tokenizer = AutoTokenizer.from_pretrained('${_MODEL_ID}')
+
+        model.save_pretrained('/workspace/model')
+        tokenizer.save_pretrained('/workspace/model')
+
+        with tarfile.open('model.tar.gz', 'w:gz') as tar:
+            tar.add('/workspace/model', arcname='.')
+    env:
+      - "HUGGING_FACE_TOKEN=${_HF_TOKEN}"
+
+  # Build and push predictor container
   - name: "gcr.io/cloud-builders/docker"
-    args: [
+    args:
+      [
         "build",
         "-t",
-        "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE}:${_TAG}",
+        "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ENVIRONMENT}-vertex-ai-repo/${_MODEL_ID}",
+        "-f",
+        "models/types/huggingface/docker/Dockerfile",
         "--build-arg",
         "HF_TASK=${_HF_TASK}",
-        "--platform=linux/amd64",
-        "--file",
-        "./models/huggingface_model/docker/Dockerfile", # Updated path
-        "./models/huggingface_model/docker", # Updated path
+        "models/types/huggingface/docker",
       ]
 
-  # Push the container image
   - name: "gcr.io/cloud-builders/docker"
     args:
       [
         "push",
-        "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE}:${_TAG}",
+        "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ENVIRONMENT}-vertex-ai-repo/${_MODEL_ID}",
       ]
 
-  # Download and package the Hugging Face model
-  - name: "python:3.9"
+  # Deploy to Vertex AI
+  - name: "gcr.io/cloud-builders/gcloud"
     entrypoint: "bash"
     args:
-      - "-c"
+      - -c
       - |
-        pip install transformers torch
-        python -c "
-        from transformers import AutoModel, AutoTokenizer
-        model = AutoModel.from_pretrained('${_HF_MODEL_ID}')
-        tokenizer = AutoTokenizer.from_pretrained('${_HF_MODEL_ID}')
-        model.save_pretrained('/workspace/model')
-        tokenizer.save_pretrained('/workspace/model')
-        "
-        cd /workspace/model
-        tar zcvf model.tar.gz *
-        gsutil cp model.tar.gz gs://${_BUCKET_NAME}/${_MODEL_VERSION}/
+        # Upload model artifacts
+        gsutil cp model.tar.gz gs://$PROJECT_ID-${_ENVIRONMENT}-vertex-ai-artifacts/${_MODEL_ID}/
 
-substitutions:
-  _REGION: "europe-west3"
-  _REPOSITORY: "translator-models"
-  _IMAGE: "hf-predictor"
-  _TAG: "latest"
-  _HF_TASK: "automatic-speech-recognition"
-  _HF_MODEL_ID: ""
-  _BUCKET_NAME: ""
-  _MODEL_VERSION: "v1"
+        # Deploy to endpoint
+        gcloud ai models upload \
+          --region=${_REGION} \
+          --display-name=${_MODEL_ID} \
+          --artifact-uri=gs://$PROJECT_ID-${_ENVIRONMENT}-vertex-ai-artifacts/${_MODEL_ID} \
+          --container-image-uri=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ENVIRONMENT}-vertex-ai-repo/${_MODEL_ID} \
+          --container-env-vars=HF_TASK=${_HF_TASK}
+
+        gcloud ai endpoints deploy-model ${_ENDPOINT} \
+          --region=${_REGION} \
+          --model=${_MODEL_ID} \
+          --machine-type=n1-standard-4 \
+          --min-replica-count=1 \
+          --max-replica-count=1
+
+timeout: "3600s"

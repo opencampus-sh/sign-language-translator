@@ -31,16 +31,25 @@ module "iam" {
   environment          = "dev"
   region               = var.region
   enable_cloud_run_iam = false
+  github_token         = var.github_token
 }
 
 module "vertex_ai" {
   source = "../../modules/vertex_ai"
 
-  project_id            = var.project_id
-  region                = var.region
-  environment           = "dev"
-  network_name          = "default"
-  service_account_email = module.iam.vertex_ai_service_account
+  project_id                  = var.project_id
+  region                      = var.region
+  environment                 = "dev"
+  network_name                = "default"
+  service_account_email       = module.iam.vertex_ai_service_account
+  github_app_installation_id  = var.github_app_installation_id
+  github_token_secret_version = module.iam.github_token_secret_version
+  model_id                    = "openai/whisper-large-v3-turbo"
+
+  depends_on = [
+    module.iam,
+    module.project
+  ]
 }
 
 module "monitoring" {

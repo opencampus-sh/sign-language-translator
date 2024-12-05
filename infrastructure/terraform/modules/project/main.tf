@@ -8,7 +8,8 @@ resource "google_project_service" "required_apis" {
     "monitoring.googleapis.com",
     "billingbudgets.googleapis.com",
     "aiplatform.googleapis.com",
-    "servicenetworking.googleapis.com"
+    "servicenetworking.googleapis.com",
+    "secretmanager.googleapis.com"
   ])
 
   project = var.project_id

@@ -95,3 +95,14 @@ variable "cost_alert_threshold" {
   description = "Threshold for hourly cost alerts in USD"
   type        = number
 }
+
+variable "github_token" {
+  description = "GitHub token for Cloud Build"
+  type        = string
+  sensitive   = true
+}
+
+variable "github_app_installation_id" {
+  description = "The installation ID of the Cloud Build GitHub App"
+  type        = number # Installation IDs are numeric
+}
