@@ -17,19 +17,35 @@ steps:
     args:
       - -c
       - |
-        import transformers
+        import os
+        print(f"Model ID: {os.environ.get('_MODEL_ID', 'Not set!')}")
+        print(f"HF Token present: {'_HF_TOKEN' in os.environ}")
+
         from transformers import AutoModel, AutoTokenizer
 
-        model = AutoModel.from_pretrained('${_MODEL_ID}')
-        tokenizer = AutoTokenizer.from_pretrained('${_MODEL_ID}')
+        model_id = os.environ.get('_MODEL_ID')
+        if not model_id:
+            raise ValueError("_MODEL_ID environment variable is not set")
+            
+        print(f"Attempting to load model: {model_id}")
+        model = AutoModel.from_pretrained(
+            model_id,
+            use_auth_token=os.environ.get('_HF_TOKEN')
+        )
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_id,
+            use_auth_token=os.environ.get('_HF_TOKEN')
+        )
 
         model.save_pretrained('/workspace/model')
         tokenizer.save_pretrained('/workspace/model')
 
+        import tarfile
         with tarfile.open('model.tar.gz', 'w:gz') as tar:
             tar.add('/workspace/model', arcname='.')
     env:
-      - "HUGGING_FACE_TOKEN=${_HF_TOKEN}"
+      - "_MODEL_ID=${_MODEL_ID}"
+      - "_HF_TOKEN=${_HF_TOKEN}"
 
   # Build and push predictor container
   - name: "gcr.io/cloud-builders/docker"

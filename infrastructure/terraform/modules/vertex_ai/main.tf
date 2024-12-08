@@ -92,31 +92,32 @@ resource "google_cloudbuildv2_repository" "github_repo" {
   remote_uri        = "https://github.com/${var.github_owner}/${var.github_repo}.git"
 }
 
-# # Manual trigger (can be executed via gcloud)
-# resource "google_cloudbuild_trigger" "model_deployment_manual" {
-#   name = "${var.environment}-${var.endpoint_name}-deploy"
+# Manual trigger (can be executed via gcloud)
+resource "google_cloudbuild_trigger" "model_deployment_manual" {
+  name = "${var.environment}-${var.endpoint_name}-deploy"
 
-#   source_to_build {
-#     repository = google_cloudbuildv2_repository.github_repo.id
-#     ref        = "refs/heads/main"
-#     repo_type  = "GITHUB"
-#   }
+  source_to_build {
+    repository = google_cloudbuildv2_repository.github_repo.id
+    ref        = "refs/heads/main"
+    repo_type  = "GITHUB"
+  }
 
-#   git_file_source {
-#     path      = "models/types/huggingface/cloud-build/cloudbuild.yaml"
-#     uri       = "https://github.com/${var.github_owner}/${var.github_repo}"
-#     repo_type = "GITHUB"
-#   }
+  git_file_source {
+    path      = "models/types/huggingface/cloud-build/cloudbuild.yaml"
+    uri       = "https://github.com/${var.github_owner}/${var.github_repo}"
+    repo_type = "GITHUB"
+  }
 
-#   substitutions = {
-#     _ENVIRONMENT   = var.environment
-#     _MODEL_ID      = var.model_id
-#     _MODEL_VERSION = var.model_version
-#     _HF_TASK       = var.hf_task
-#     _REGION        = var.region
-#     _ENDPOINT      = google_vertex_ai_endpoint.model_endpoint.name
-#   }
-# }
+  substitutions = {
+    _ENVIRONMENT   = var.environment
+    _MODEL_ID      = var.model_id
+    _MODEL_VERSION = var.model_version
+    _HF_TASK       = var.hf_task
+    _REGION        = var.region
+    _ENDPOINT      = google_vertex_ai_endpoint.model_endpoint.name
+    _HF_TOKEN      = var.huggingface_token
+  }
+}
 
 
 # Add Cloud Build triggers for model deployment
