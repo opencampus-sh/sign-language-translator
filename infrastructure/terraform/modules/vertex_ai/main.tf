@@ -71,27 +71,26 @@ resource "google_storage_bucket_iam_member" "vertex_ai_bucket_access" {
 }
 
 # Create GitHub connection
-# resource "google_cloudbuildv2_connection" "github_connection" {
-#   project  = var.project_id
-#   location = var.region
-#   name     = "${var.environment}-github-connection"
+resource "google_cloudbuildv2_connection" "github_connection" {
+  project  = var.project_id
+  location = var.region
+  name     = "${var.environment}-github-connection"
 
-#   github_config {
-#     app_installation_id = var.github_app_installation_id
-#     authorizer_credential {
-#       oauth_token_secret_version = github_token_secret_version.id
-#     }
-#   }
-#   depends_on = [github_token_secret_version]
-# }
+  github_config {
+    app_installation_id = var.github_app_installation_id
+    authorizer_credential {
+      oauth_token_secret_version = var.github_token_secret_version
+    }
+  }
+}
 
-# resource "google_cloudbuildv2_repository" "github_repo" {
-#   project           = var.project_id
-#   location          = var.region
-#   name              = var.github_repo
-#   parent_connection = google_cloudbuildv2_connection.github_connection.name
-#   remote_uri        = "https://github.com/${var.github_owner}/${var.github_repo}.git"
-# }
+resource "google_cloudbuildv2_repository" "github_repo" {
+  project           = var.project_id
+  location          = var.region
+  name              = var.github_repo
+  parent_connection = google_cloudbuildv2_connection.github_connection.name
+  remote_uri        = "https://github.com/${var.github_owner}/${var.github_repo}.git"
+}
 
 # # Manual trigger (can be executed via gcloud)
 # resource "google_cloudbuild_trigger" "model_deployment_manual" {

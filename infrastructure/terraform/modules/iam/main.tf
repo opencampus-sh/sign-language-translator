@@ -50,9 +50,10 @@ resource "google_project_iam_member" "ml_training_roles" {
 resource "google_project_iam_member" "vertex_ai_roles" {
   for_each = toset([
     "roles/aiplatform.user",
-    "roles/storage.objectViewer",
-    "roles/artifactregistry.reader",
-    "roles/monitoring.metricWriter" # For model monitoring
+    "roles/storage.admin",
+    "roles/artifactregistry.writer",
+    "roles/monitoring.metricWriter",
+    "roles/logging.logWriter"
   ])
 
   project = var.project_id
