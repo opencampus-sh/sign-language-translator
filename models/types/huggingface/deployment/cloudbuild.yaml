@@ -9,8 +9,20 @@ steps:
     args:
       - -c
       - |
-        from transformers import AutoModel, AutoTokenizer
-        import tarfile, os
+        import sys
+        print(f"Python path: {sys.path}")
+        print("Attempting to import required packages...")
+        try:
+            import torch
+            print(f"Torch version: {torch.__version__}")
+            import transformers
+            print(f"Transformers version: {transformers.__version__}")
+            from transformers import AutoModel, AutoTokenizer
+            print("Successfully imported AutoModel and AutoTokenizer")
+        except Exception as e:
+            print(f"Error importing: {str(e)}")
+            sys.exit(1)
+
 
         model = AutoModel.from_pretrained('${_MODEL_ID}')
         tokenizer = AutoTokenizer.from_pretrained('${_MODEL_ID}')
