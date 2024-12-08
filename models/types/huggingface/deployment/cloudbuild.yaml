@@ -51,13 +51,13 @@ steps:
       - -c
       - |
         # Upload model artifacts
-        gsutil cp model.tar.gz gs://$PROJECT_ID-${_ENVIRONMENT}-vertex-ai-artifacts/${_MODEL_ID}/
+        gsutil cp model.tar.gz gs://$PROJECT_ID-${_ENVIRONMENT}-models/${_MODEL_ID}/
 
         # Deploy to endpoint
         gcloud ai models upload \
           --region=${_REGION} \
           --display-name=${_MODEL_ID} \
-          --artifact-uri=gs://$PROJECT_ID-${_ENVIRONMENT}-vertex-ai-artifacts/${_MODEL_ID} \
+          --artifact-uri=gs://$PROJECT_ID-${_ENVIRONMENT}-models/${_MODEL_ID} \
           --container-image-uri=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ENVIRONMENT}-vertex-ai-repo/${_MODEL_ID} \
           --container-env-vars=HF_TASK=${_HF_TASK}
 
