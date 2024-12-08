@@ -2,7 +2,7 @@ from google.cloud import aiplatform
 from google.cloud import storage
 import math
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Literal
 
 @dataclass
 class MachineConfig:
@@ -13,15 +13,19 @@ class MachineConfig:
 
 @dataclass
 class JobConfig:
-    provisioning_model: Literal["DEDICATED", "SPOT"] = "DEDICATED"
+    provisioning_model: Literal["DEDICATED", "SPOT"] = "SPOT"
     restart_on_failure: bool = True
     timeout_days: Optional[float] = None
 
 class CloudProcessor:
-    def __init__(self, project_id: str, location: str = "us-central1"):
-        aiplatform.init(project=project_id, location=location)
+    def __init__(self, project_id: str, location: str = "us-central1", staging_bucket: str = None):
+        if not staging_bucket:
+            raise ValueError("A staging bucket must be provided.")
+        
+        aiplatform.init(project=project_id, location=location, staging_bucket=staging_bucket)
         self.project_id = project_id
         self.location = location
+        self.staging_bucket = staging_bucket
     
     def submit_job(
         self,
@@ -36,7 +40,7 @@ class CloudProcessor:
         machine_config = machine_config or MachineConfig()
         job_config = job_config or JobConfig()
 
-        # Rest of the script_contents remains the same as previous version
+        # Define the script to be executed
         script_contents = f'''
 import os
 from google.cloud import storage
@@ -50,25 +54,18 @@ def process_batch(start_idx, end_idx, input_bucket, output_bucket):
     blobs = list(client.list_blobs(input_bucket))[start_idx:end_idx]
     
     for blob in blobs:
-        # Create temporary directory for this video
         with tempfile.TemporaryDirectory() as temp_dir:
             input_path = os.path.join(temp_dir, blob.name.split("/")[-1])
-            
-            # Download video
             blob.download_to_filename(input_path)
             
             try:
-                # Process video
                 output_path = process_single_video(input_path, temp_dir)
-                
-                # Upload result
                 output_blob = client.bucket(output_bucket).blob(
-                    f"processed_{blob.name}"
+                    "processed_" + blob.name
                 )
                 output_blob.upload_from_filename(output_path)
             
             finally:
-                # Cleanup
                 if os.path.exists(input_path):
                     os.remove(input_path)
                 shutil.rmtree(temp_dir, ignore_errors=True)
@@ -90,7 +87,6 @@ if __name__ == "__main__":
         start_idx = 0
         end_idx = len(list(storage.Client().list_blobs("{input_bucket}")))
     
-    # Process in batches
     for batch_start in range(start_idx, end_idx, {batch_size}):
         batch_end = min(batch_start + {batch_size}, end_idx)
         process_batch(
@@ -101,47 +97,63 @@ if __name__ == "__main__":
         )
 '''
 
-        machine_spec = {
-            "machine_type": machine_config.machine_type,
-            "disk_size_gb": machine_config.disk_size_gb,
-        }
-        
-        if machine_config.accelerator_type:
-            machine_spec.update({
-                "accelerator_type": machine_config.accelerator_type,
-                "accelerator_count": machine_config.accelerator_count
-            })
-        
-        container_spec = {
-            "image_uri": "us-docker.pkg.dev/vertex-ai/training/pytorch-cpu.1-13:latest",
-            "command": ["python", "-c", script_contents],
-        }
-        
+        # Define worker pool specifications
+        worker_pool_specs = [
+            # Master worker pool (always 1 replica)
+            {
+                "machine_spec": {
+                    "machine_type": machine_config.machine_type,
+                    "accelerator_type": machine_config.accelerator_type if machine_config.accelerator_type else None,
+                    "accelerator_count": machine_config.accelerator_count if machine_config.accelerator_type else 0
+                },
+                "replica_count": 1,  # Master pool always has 1 replica
+                "container_spec": {
+                    "image_uri": "europe-docker.pkg.dev/vertex-ai/training/tf-cpu.2-14.py310:latest",
+                    "command": ["python", "-c", script_contents],
+                    "args": ["--worker-id=0", f"--num-workers={workers}"] if workers > 1 else []
+                },
+                "disk_spec": {
+                    "boot_disk_type": "pd-ssd",
+                    "boot_disk_size_gb": machine_config.disk_size_gb
+                }
+            }
+        ]
+
+        # Add worker pool for additional workers if needed
         if workers > 1:
-            container_spec["args"] = [
-                f"--worker-id=$(JOB_ID)",
-                f"--num-workers={workers}",
-            ]
-        
-        worker_pool_specs = [{
-            "machine_spec": machine_spec,
-            "replica_count": workers,
-            "container_spec": container_spec,
-        }]
+            worker_pool_specs.append({
+                "machine_spec": {
+                    "machine_type": machine_config.machine_type,
+                    "accelerator_type": machine_config.accelerator_type if machine_config.accelerator_type else None,
+                    "accelerator_count": machine_config.accelerator_count if machine_config.accelerator_type else 0
+                },
+                "replica_count": workers - 1,  # Remaining workers
+                "container_spec": {
+                    "image_uri": "europe-docker.pkg.dev/vertex-ai/training/tf-cpu.2-14.py310:latest",
+                    "command": ["python", "-c", script_contents],
+                    "args": [f"--worker-id=$(JOB_ID)", f"--num-workers={workers}"]
+                },
+                "disk_spec": {
+                    "boot_disk_type": "pd-ssd",
+                    "boot_disk_size_gb": machine_config.disk_size_gb
+                }
+            })
 
-        scheduling = aiplatform.JobScheduling(
-            provisioning_model=job_config.provisioning_model,
-            restart_job_on_worker_restart=job_config.restart_on_failure
-        )
-        
-        if job_config.timeout_days:
-            scheduling.timeout = f"{job_config.timeout_days * 24}h"
-
+        # Create custom job
         job = aiplatform.CustomJob(
             display_name=f"video-process",
             worker_pool_specs=worker_pool_specs,
-            scheduling=scheduling
+            staging_bucket=self.staging_bucket
         )
-        
-        job.run()
+
+        # Set job options based on JobConfig
+        job_kwargs = {
+            "sync": True,  # Wait for the job to complete
+        }
+
+        if job_config.timeout_days:
+            job_kwargs["timeout"] = int(job_config.timeout_days * 24 * 60 * 60)  # Convert days to seconds
+
+        # Run the job
+        job.run(**job_kwargs)
         return job

@@ -20,15 +20,15 @@ module "project" {
 module "storage" {
   source      = "../../modules/storage"
   project_id  = var.project_id
+  environment = var.environment
   region      = var.region
-  environment = "dev"
   depends_on  = [module.project]
 }
 
 module "iam" {
   source               = "../../modules/iam"
   project_id           = var.project_id
-  environment          = "dev"
+  environment          = var.environment
   region               = var.region
   enable_cloud_run_iam = false
   github_token         = var.github_token
@@ -39,7 +39,7 @@ module "vertex_ai" {
 
   project_id                  = var.project_id
   region                      = var.region
-  environment                 = "dev"
+  environment                 = var.environment
   network_name                = "default"
   service_account_email       = module.iam.vertex_ai_service_account
   github_app_installation_id  = var.github_app_installation_id
