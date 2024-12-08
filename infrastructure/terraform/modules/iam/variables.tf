@@ -4,7 +4,7 @@ variable "project_id" {
 }
 
 variable "environment" {
-  description = "The environment (dev or staging)"
+  description = "The environment (dev, staging, prod)"
   type        = string
 }
 
@@ -23,4 +23,10 @@ variable "cloud_run_service_name" {
   description = "The name of the Cloud Run service"
   type        = string
   default     = "sign-language-translator"
+}
+
+variable "github_token" {
+  description = "GitHub token for Cloud Build"
+  type        = string
+  sensitive   = true
 }

@@ -5,7 +5,10 @@ WORKDIR /app
 COPY requirements.txt .
 COPY predictor.py .
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    fastapi \
+    "uvicorn[standard]" \
+    google-cloud-aiplatform
 
 ARG HF_TASK
 ENV HF_TASK=${HF_TASK}
