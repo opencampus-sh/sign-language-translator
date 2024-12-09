@@ -53,12 +53,12 @@ steps:
       [
         "build",
         "-t",
-        "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ENVIRONMENT}-vertex-ai-repo/${_MODEL_ID}",
+        "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ENVIRONMENT}-vertex-ai-repo/${_MODEL_ID}",
         "-f",
-        "models/types/huggingface/docker/Dockerfile",
+        "models/types/huggingface/deployment/Dockerfile",
         "--build-arg",
         "HF_TASK=${_HF_TASK}",
-        "models/types/huggingface/docker",
+        ".",
       ]
 
   - name: "gcr.io/cloud-builders/docker"

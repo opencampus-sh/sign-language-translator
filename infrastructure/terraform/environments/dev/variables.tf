@@ -106,3 +106,10 @@ variable "github_app_installation_id" {
   description = "The installation ID of the Cloud Build GitHub App"
   type        = number # Installation IDs are numeric
 }
+
+variable "huggingface_token" {
+  description = "HuggingFace API token"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

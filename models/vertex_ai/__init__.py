@@ -90,6 +90,14 @@ class ModelConfig:
     def version(self) -> str:
         """Model version"""
         return self.config["model"]["version"]
+    
+    @property
+    def huggingface_token(self) -> str:
+        """Get the Hugging Face API token from environment variables"""
+        token = os.getenv('HUGGINGFACE_TOKEN')
+        if not token:
+            raise ValueError("HUGGINGFACE_TOKEN environment variable is not set")
+        return token
 
 # Convenience function to get configuration
 def get_config(environment: str = "dev") -> ModelConfig:
@@ -104,4 +112,15 @@ def get_config(environment: str = "dev") -> ModelConfig:
     """
     return ModelConfig(environment)
 
-__all__ = ['ModelConfig', 'get_config']
+# Import classes from their respective modules
+from .model_deployer import ModelDeployer
+from .cloud_processor import CloudProcessor, MachineConfig, JobConfig
+
+__all__ = [
+    'ModelConfig',
+    'get_config',
+    'ModelDeployer',
+    'CloudProcessor',
+    'MachineConfig',
+    'JobConfig'
+]
