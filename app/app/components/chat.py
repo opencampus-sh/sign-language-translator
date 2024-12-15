@@ -32,10 +32,10 @@ def process_audio(audio, history):
 
         text = transcribe(audio)
         if text and text.strip():  # Nur nicht-leere Transkriptionen hinzufügen
-            history.append({"role": "user", "content": text})
+            send_message_from_other(text, history)
         return history
     except Exception as e:
-        history.append({"role": "system", "content": f"Fehler bei der Transkription: {str(e)}"})
+        send_message_from_other("Fehler bei der Transkription", history)
         return history
 
 
