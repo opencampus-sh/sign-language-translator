@@ -1,6 +1,6 @@
 output "github_token_secret_version" {
-  description = "The resource name of the GitHub token secret version"
-  value       = "${google_secret_manager_secret.github_token.id}/versions/latest"
+  description = "The ID of the GitHub token secret version"
+  value       = google_secret_manager_secret_version.github_token.id
 }
 
 output "vertex_ai_service_account" {

@@ -2,26 +2,50 @@ steps:
   # Download and package model
   - name: "python:3.10"
     entrypoint: pip
-    args: ["install", "-r", "models/types/huggingface/requirements.txt"]
+    args:
+      [
+        "install",
+        "--user",
+        "--no-cache-dir",
+        "-r",
+        "models/types/huggingface/requirements.txt",
+        "-v",
+      ]
 
   - name: "python:3.10"
     entrypoint: python
     args:
       - -c
       - |
-        from transformers import AutoModel, AutoTokenizer
-        import tarfile, os
+        import os
+        print(f"Model ID: {os.environ.get('_MODEL_ID', 'Not set!')}")
+        print(f"HF Token present: {'_HF_TOKEN' in os.environ}")
 
-        model = AutoModel.from_pretrained('${_MODEL_ID}')
-        tokenizer = AutoTokenizer.from_pretrained('${_MODEL_ID}')
+        from transformers import AutoModel, AutoTokenizer
+
+        model_id = os.environ.get('_MODEL_ID')
+        if not model_id:
+            raise ValueError("_MODEL_ID environment variable is not set")
+            
+        print(f"Attempting to load model: {model_id}")
+        model = AutoModel.from_pretrained(
+            model_id,
+            use_auth_token=os.environ.get('_HF_TOKEN')
+        )
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_id,
+            use_auth_token=os.environ.get('_HF_TOKEN')
+        )
 
         model.save_pretrained('/workspace/model')
         tokenizer.save_pretrained('/workspace/model')
 
+        import tarfile
         with tarfile.open('model.tar.gz', 'w:gz') as tar:
             tar.add('/workspace/model', arcname='.')
     env:
-      - "HUGGING_FACE_TOKEN=${_HF_TOKEN}"
+      - "_MODEL_ID=${_MODEL_ID}"
+      - "_HF_TOKEN=${_HF_TOKEN}"
 
   # Build and push predictor container
   - name: "gcr.io/cloud-builders/docker"
@@ -51,13 +75,13 @@ steps:
       - -c
       - |
         # Upload model artifacts
-        gsutil cp model.tar.gz gs://$PROJECT_ID-${_ENVIRONMENT}-vertex-ai-artifacts/${_MODEL_ID}/
+        gsutil cp model.tar.gz gs://$PROJECT_ID-${_ENVIRONMENT}-models/${_MODEL_ID}/
 
         # Deploy to endpoint
         gcloud ai models upload \
           --region=${_REGION} \
           --display-name=${_MODEL_ID} \
-          --artifact-uri=gs://$PROJECT_ID-${_ENVIRONMENT}-vertex-ai-artifacts/${_MODEL_ID} \
+          --artifact-uri=gs://$PROJECT_ID-${_ENVIRONMENT}-models/${_MODEL_ID} \
           --container-image-uri=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ENVIRONMENT}-vertex-ai-repo/${_MODEL_ID} \
           --container-env-vars=HF_TASK=${_HF_TASK}
 

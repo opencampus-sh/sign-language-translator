@@ -55,6 +55,13 @@ variable "github_repo" {
   default     = "sign-language-translator"
 }
 
+# All variables below this comment are required for the Hugging Face model deployment
+variable "huggingface_token" {
+  description = "HuggingFace API token"
+  type        = string
+  sensitive   = true # Mark as sensitive to handle it securely
+}
+
 variable "model_id" {
   description = "ID of the model to deploy"
   type        = string
