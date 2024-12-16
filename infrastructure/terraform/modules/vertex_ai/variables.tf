@@ -60,6 +60,7 @@ variable "huggingface_token" {
   description = "HuggingFace API token"
   type        = string
   sensitive   = true # Mark as sensitive to handle it securely
+  default     = ""
 }
 
 variable "model_id" {

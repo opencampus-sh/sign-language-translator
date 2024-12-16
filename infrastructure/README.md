@@ -2,17 +2,6 @@
 
 This directory contains all cloud infrastructure code for the Sign Language Translation project. The infrastructure is managed using Terraform and organized by environment.
 
-## Prerequisites
-
-1. [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) installed
-2. Access to the OpenCampus organization in Google Cloud
-3. Appropriate permissions:
-   - Organization viewer
-   - Project creator
-   - Billing account user
-4. Email address for monitoring alerts
-5. [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-terraform) installed
-
 ## Structure
 
 ```

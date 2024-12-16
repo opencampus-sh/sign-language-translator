@@ -3,6 +3,9 @@ from google.cloud import storage
 import math
 from dataclasses import dataclass
 from typing import Optional, Literal
+from threading import Thread
+from tqdm.notebook import tqdm
+import time
 
 @dataclass
 class MachineConfig:
@@ -18,25 +21,89 @@ class JobConfig:
     timeout_days: Optional[float] = None
 
 class CloudProcessor:
-    def __init__(self, project_id: str, location: str = "us-central1", staging_bucket: str = None):
+    def __init__(
+        self, 
+        project_id: str, 
+        location: str = "us-central1", 
+        staging_bucket: str = None,
+        data_bucket: str = None
+    ):
+        """Initialize CloudProcessor
+        Args:
+            project_id (str): GCP project ID
+            location (str): GCP region
+            staging_bucket (str): Bucket name without gs:// prefix
+            data_bucket (str): Main data bucket name without gs:// prefix
+        """
         if not staging_bucket:
             raise ValueError("A staging bucket must be provided.")
+            
+        # Remove gs:// prefix if present
+        staging_bucket = staging_bucket.replace('gs://', '')
+        if data_bucket:
+            data_bucket = data_bucket.replace('gs://', '')
         
-        aiplatform.init(project=project_id, location=location, staging_bucket=staging_bucket)
+        aiplatform.init(
+            project=project_id, 
+            location=location, 
+            staging_bucket=f"gs://{staging_bucket}"
+        )
         self.project_id = project_id
         self.location = location
         self.staging_bucket = staging_bucket
+        self.data_bucket = data_bucket
+
+    def _monitor_job_progress(self, input_bucket: str, output_bucket: str):
+        """Monitor job progress by counting files in output bucket"""
+        client = storage.Client()
+        input_files = list(client.list_blobs(input_bucket))
+        total_files = len(input_files)
+        
+        with tqdm(total=total_files, desc="Processing files") as pbar:
+            processed_count = 0
+            while processed_count < total_files:
+                # Count processed files in output bucket
+                new_count = len(list(client.list_blobs(output_bucket)))
+                if new_count > processed_count:
+                    pbar.update(new_count - processed_count)
+                    processed_count = new_count
+                time.sleep(5)  # Check every 5 seconds
     
     def submit_job(
         self,
         processing_fn: str,
-        input_bucket: str,
-        output_bucket: str,
+        input_folder: str,
+        output_folder: str,
+        input_bucket: str = None,
+        output_bucket: str = None,
         workers: int = 1,
         machine_config: Optional[MachineConfig] = None,
         job_config: Optional[JobConfig] = None,
-        batch_size: int = 1
+        batch_size: int = 1,
+        show_progress: bool = True
     ):
+        """
+        Submit a processing job to Vertex AI
+        
+        Args:
+            processing_fn (str): The function to be executed
+            input_folder (str): The folder path for input files (e.g. "raw-data/")
+            output_folder (str): The folder path for output files (e.g. "landmarks/")
+            input_bucket (str, optional): Override the default data bucket for input
+            output_bucket (str, optional): Override the default data bucket for output
+            workers (int): The number of workers to use
+            machine_config (Optional[MachineConfig]): The machine configuration
+            job_config (Optional[JobConfig]): The job configuration
+            batch_size (int): The batch size to use
+            show_progress (bool): Whether to show a progress bar in notebooks
+        """
+        # Use default data bucket if not overridden
+        input_bucket = input_bucket or self.data_bucket
+        output_bucket = output_bucket or self.data_bucket
+
+        if not input_bucket or not output_bucket:
+            raise ValueError("No data bucket specified. Either provide it during initialization or in submit_job()")
+
         machine_config = machine_config or MachineConfig()
         job_config = job_config or JobConfig()
 
@@ -49,9 +116,10 @@ import shutil
 
 {processing_fn}
 
-def process_batch(start_idx, end_idx, input_bucket, output_bucket):
+def process_batch(start_idx, end_idx, input_bucket, output_bucket, input_folder, output_folder):
     client = storage.Client()
-    blobs = list(client.list_blobs(input_bucket))[start_idx:end_idx]
+    bucket = client.bucket(input_bucket)
+    blobs = list(bucket.list_blobs(prefix=input_folder))[start_idx:end_idx]
     
     for blob in blobs:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -61,7 +129,7 @@ def process_batch(start_idx, end_idx, input_bucket, output_bucket):
             try:
                 output_path = process_single_video(input_path, temp_dir)
                 output_blob = client.bucket(output_bucket).blob(
-                    "processed_" + blob.name
+                    output_folder + "processed_" + os.path.basename(blob.name)
                 )
                 output_blob.upload_from_filename(output_path)
             
@@ -93,7 +161,9 @@ if __name__ == "__main__":
             batch_start,
             batch_end,
             "{input_bucket}",
-            "{output_bucket}"
+            "{output_bucket}",
+            "{input_folder}",
+            "{output_folder}"
         )
 '''
 
@@ -154,6 +224,21 @@ if __name__ == "__main__":
         if job_config.timeout_days:
             job_kwargs["timeout"] = int(job_config.timeout_days * 24 * 60 * 60)  # Convert days to seconds
 
-        # Run the job
-        job.run(**job_kwargs)
+        if show_progress:
+            # Start job and progress monitoring in separate threads
+            job_thread = Thread(target=job.run, kwargs=job_kwargs, daemon=True)
+            progress_thread = Thread(
+                target=self._monitor_job_progress,
+                args=(input_bucket, output_bucket),
+                daemon=True
+            )
+            
+            job_thread.start()
+            progress_thread.start()
+            job_thread.join()
+            progress_thread.join()
+        else:
+            # Run job without progress monitoring
+            job.run(**job_kwargs)
+            
         return job

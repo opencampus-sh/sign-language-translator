@@ -1,6 +1,6 @@
-# Training data bucket
-resource "google_storage_bucket" "training_data" {
-  name          = "${var.project_id}-${var.environment}-training-data"
+# Main data bucket with subfolders
+resource "google_storage_bucket" "data" {
+  name          = "${var.project_id}-${var.environment}-data"
   location      = var.region
   force_destroy = var.environment != "prod"
   project       = var.project_id
@@ -17,24 +17,11 @@ resource "google_storage_bucket" "training_data" {
     }
   }
 
-  labels = {
-    environment = var.environment
-    purpose     = "training-data"
-  }
-}
-
-# Raw data bucket
-resource "google_storage_bucket" "raw_data" {
-  name          = "${var.project_id}-${var.environment}-raw-data"
-  location      = var.region
-  force_destroy = var.environment != "prod"
-  project       = var.project_id
-
-  uniform_bucket_level_access = true
-
+  # Special rule for models subfolder
   lifecycle_rule {
     condition {
-      age = 30
+      age            = 90 # Longer retention for model artifacts
+      matches_prefix = ["models/"]
     }
     action {
       type          = "SetStorageClass"
@@ -44,57 +31,7 @@ resource "google_storage_bucket" "raw_data" {
 
   labels = {
     environment = var.environment
-    purpose     = "raw-data"
-  }
-}
-
-# Landmarks data bucket
-resource "google_storage_bucket" "landmarks" {
-  name          = "${var.project_id}-${var.environment}-landmarks"
-  location      = var.region
-  force_destroy = var.environment != "prod"
-  project       = var.project_id
-
-  uniform_bucket_level_access = true
-
-  lifecycle_rule {
-    condition {
-      age = 30
-    }
-    action {
-      type          = "SetStorageClass"
-      storage_class = "NEARLINE"
-    }
-  }
-
-  labels = {
-    environment = var.environment
-    purpose     = "landmarks"
-  }
-}
-
-# Models bucket
-resource "google_storage_bucket" "models" {
-  name          = "${var.project_id}-${var.environment}-models"
-  location      = var.region
-  force_destroy = var.environment != "prod"
-  project       = var.project_id
-
-  uniform_bucket_level_access = true
-
-  lifecycle_rule {
-    condition {
-      age = 90 # Longer retention for model artifacts
-    }
-    action {
-      type          = "SetStorageClass"
-      storage_class = "NEARLINE"
-    }
-  }
-
-  labels = {
-    environment = var.environment
-    purpose     = "models"
+    purpose     = "data"
   }
 }
 

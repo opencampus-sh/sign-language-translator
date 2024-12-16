@@ -4,16 +4,19 @@ This directory contains model-related code and utilities for the Sign Language T
 
 ## Directory Structure
 
-models/
-├── types/ # Model type implementations
-│ ├── huggingface/ # Hugging Face model deployment
-│ └── mock/ # Mock model for testing
-├── vertex_ai/ # Vertex AI integration
-└── build_model_experimentation_lineage_with_prebuild_code.ipynb # Batch processing example
+models/  
+├── types/ # Model type implementations  
+│ ├── huggingface/ # Hugging Face model deployment  
+│ └── mock/ # Mock model for testing  
+├── vertex_ai/ # Python classes for Vertex AI integration  
+├── cloud_processing.ipynb # Cloud processing example  
+├── model_training.ipynb # Model training example  
+├── model_deployment.ipynb # Model deployment example  
+└── README.md # This file
 
-## Getting Started with Batch Processing
+## Getting Started with Cloud Processing
 
-The `build_model_experimentation_lineage_with_prebuild_code.ipynb` notebook demonstrates how to process data in batch using Vertex AI. Before running the notebook, ensure proper access is configured.
+The `cloud_processing.ipynb` notebook demonstrates how to process data in batch using Vertex AI. Before running the notebook, ensure proper access is configured.
 
 ### 1. Access Requirements
 
@@ -38,48 +41,32 @@ Available roles:
 
 ### 2. Storage Bucket Structure
 
-The project uses five distinct buckets, each with a specific purpose:
+The project uses two distinct buckets:
 
-1. Raw Data Bucket (`${PROJECT_ID}-${ENV}-raw-data`):
+1. Data Bucket (`${PROJECT_ID}-${ENV}-data`):
 
-   - Stores the initial CSV files with video links
-   - Source data for the preprocessing pipeline
+   - `/raw-data/` - Initial CSV files with video links
+   - `/landmarks/` - Extracted MediaPipe landmarks
+   - `/training/` - Processed features ready for model training
+   - `/models/` - Trained model artifacts and checkpoints (90 days retention)
 
-2. Landmarks Data Bucket (`${PROJECT_ID}-${ENV}-landmarks`):
-
-   - Stores the extracted MediaPipe landmarks
-   - Output from the preprocessing pipeline
-
-3. Training Data Bucket (`${PROJECT_ID}-${ENV}-training`):
-
-   - Stores processed features ready for model training
-   - Input for training pipelines
-
-4. Models Bucket (`${PROJECT_ID}-${ENV}-models`):
-
-   - Stores trained model artifacts and checkpoints
-   - Longer retention period (90 days)
-
-5. Staging Bucket (`${PROJECT_ID}-${ENV}-staging`):
+2. Staging Bucket (`${PROJECT_ID}-${ENV}-staging`):
    - Temporary storage for Vertex AI jobs
    - Automatically cleaned up after 1 day
 
 Example bucket names for development environment:
 
 ```
-sign-lang-translator-20241029-dev-raw-data
-sign-lang-translator-20241029-dev-landmarks
-sign-lang-translator-20241029-dev-training
-sign-lang-translator-20241029-dev-models
+sign-lang-translator-20241029-dev-data
 sign-lang-translator-20241029-dev-staging
 ```
 
 Data Flow:
 
-1. Raw videos/CSV → `raw-data` bucket
-2. MediaPipe processing → `landmarks` bucket
-3. Feature extraction → `training` bucket
-4. Model training → `models` bucket
+1. Raw videos/CSV → `data/raw-data/` folder
+2. MediaPipe processing → `data/landmarks/` folder
+3. Feature extraction → `data/training/` folder
+4. Model training → `data/models/` folder
 5. Vertex AI jobs use → `staging` bucket
 
 ### 3. Running the Batch Processing Job
@@ -92,7 +79,9 @@ The batch processing notebook (`batch_processing.ipynb`) demonstrates how to pro
    - Ensure you have the necessary permissions (see Section 1)
    - The notebook will automatically detect the project root and load configurations
 
-2. **Configure Processing** ```python
+2. **Configure Processing**
+
+   ```python
 
    # Example configuration
 
@@ -106,9 +95,12 @@ The batch processing notebook (`batch_processing.ipynb`) demonstrates how to pro
    machine_type="n1-standard-4",
    accelerator_type=None, # CPU-only for MediaPipe
    disk_size_gb=100
-   ) ```
+   )
+   ```
 
-3. **Submit the Job** ```python
+3. **Submit the Job**
+
+   ```python
    processor = CloudProcessor(
    project_id=config['project_id'],
    location=config['region'],
@@ -123,7 +115,8 @@ The batch processing notebook (`batch_processing.ipynb`) demonstrates how to pro
    machine_config=machine_config,
    job_config=job_config,
    batch_size=10 # Videos per batch
-   ) ```
+   )
+   ```
 
 4. **Monitor Progress**
 
@@ -148,3 +141,11 @@ The batch processing notebook (`batch_processing.ipynb`) demonstrates how to pro
    - If job fails with permission errors, verify bucket access
    - For timeout errors, increase `timeout_days` in JobConfig
    - For memory issues, reduce `batch_size` or increase `machine_type`
+
+## Getting Started with Model Training
+
+The `model_training.ipynb` notebook demonstrates how to train a model using Vertex AI. Before running the notebook, ensure proper access is configured.
+
+## Getting Started with Model Deployment
+
+The `model_deployment.ipynb` notebook demonstrates how to deploy a model using Vertex AI. Before running the notebook, ensure proper access is configured.

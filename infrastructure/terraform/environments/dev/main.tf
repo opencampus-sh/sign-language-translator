@@ -18,7 +18,8 @@ module "project" {
 }
 
 module "storage" {
-  source      = "../../modules/storage"
+  source = "../../modules/storage"
+
   project_id  = var.project_id
   environment = var.environment
   region      = var.region
@@ -26,7 +27,8 @@ module "storage" {
 }
 
 module "iam" {
-  source               = "../../modules/iam"
+  source = "../../modules/iam"
+
   project_id           = var.project_id
   environment          = var.environment
   region               = var.region
@@ -44,7 +46,9 @@ module "vertex_ai" {
   service_account_email       = module.iam.vertex_ai_service_account
   github_app_installation_id  = var.github_app_installation_id
   github_token_secret_version = module.iam.github_token_secret_version
+  huggingface_token           = "" # default
   model_id                    = "openai/whisper-large-v3-turbo"
+  model_version               = "v1" # default
 
   depends_on = [
     module.iam,

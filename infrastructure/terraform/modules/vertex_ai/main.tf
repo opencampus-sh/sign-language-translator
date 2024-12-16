@@ -115,7 +115,6 @@ resource "google_cloudbuild_trigger" "model_deployment_manual" {
     _HF_TASK       = var.hf_task
     _REGION        = var.region
     _ENDPOINT      = google_vertex_ai_endpoint.model_endpoint.name
-    _HF_TOKEN      = var.huggingface_token
   }
 }
 
