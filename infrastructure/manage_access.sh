@@ -2,7 +2,7 @@
 
 # Import variables from terraform.tfvars
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TFVARS_FILE="$SCRIPT_DIR/../terraform/environments/dev/terraform.tfvars"
+TFVARS_FILE="$SCRIPT_DIR/terraform/environments/dev/terraform.tfvars"
 
 if [ ! -f "$TFVARS_FILE" ]; then
     echo "Error: terraform.tfvars not found at $TFVARS_FILE"
@@ -14,7 +14,10 @@ PROJECT_ID=$(grep 'project_id' "$TFVARS_FILE" | cut -d'=' -f2 | tr -d '" ' )
 
 # Configuration
 BUCKETS=(
-    "${PROJECT_ID}-training-data-dev"
+    "${PROJECT_ID}-dev-data"
+    "${PROJECT_ID}-dev-staging"
+    "${PROJECT_ID}-dev-batch-jobs"
+    "${PROJECT_ID}-dev-translator-artifacts"
 )
 
 # Role mappings
