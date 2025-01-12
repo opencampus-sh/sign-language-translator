@@ -5,8 +5,6 @@ resource "google_storage_bucket" "data" {
   force_destroy = var.environment != "prod"
   project       = var.project_id
 
-  uniform_bucket_level_access = true
-
   lifecycle_rule {
     condition {
       age = 30
@@ -36,6 +34,7 @@ resource "google_storage_bucket" "data" {
 }
 
 # Vertex AI staging bucket
+# Temporary storage for Vertex AI batch processing jobs
 resource "google_storage_bucket" "staging" {
   name          = "${var.project_id}-${var.environment}-staging"
   location      = var.region
