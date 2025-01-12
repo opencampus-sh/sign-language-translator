@@ -36,33 +36,33 @@ module "iam" {
   github_token         = var.github_token
 }
 
-module "vertex_ai" {
-  source = "../../modules/vertex_ai"
+# module "vertex_ai" {
+#   source = "../../modules/vertex_ai"
 
-  project_id                  = var.project_id
-  region                      = var.region
-  environment                 = var.environment
-  network_name                = "default"
-  service_account_email       = module.iam.vertex_ai_service_account
-  github_app_installation_id  = var.github_app_installation_id
-  github_token_secret_version = module.iam.github_token_secret_version
-  huggingface_token           = "" # default
-  model_id                    = "openai/whisper-large-v3-turbo"
-  model_version               = "v1" # default
+#   project_id                  = var.project_id
+#   region                      = var.region
+#   environment                 = var.environment
+#   network_name                = "default"
+#   service_account_email       = module.iam.vertex_ai_service_account
+#   github_app_installation_id  = var.github_app_installation_id
+#   github_token_secret_version = module.iam.github_token_secret_version
+#   huggingface_token           = "" # default
+#   model_id                    = "openai/whisper-large-v3-turbo"
+#   model_version               = "v1" # default
 
-  depends_on = [
-    module.iam,
-    module.project
-  ]
-}
+#   depends_on = [
+#     module.iam,
+#     module.project
+#   ]
+# }
 
 module "monitoring" {
   source = "../../modules/monitoring"
 
-  project_id            = var.project_id
-  environment           = var.environment
-  vertex_ai_endpoint_id = module.vertex_ai.endpoint_id
-  notification_email    = var.notification_email
+  project_id  = var.project_id
+  environment = var.environment
+  #vertex_ai_endpoint_id = module.vertex_ai.endpoint_id
+  notification_email = var.notification_email
 
   enable_vertex_ai_alerts = false
   enable_budget_alerts    = false
@@ -79,7 +79,7 @@ module "monitoring" {
   cost_alert_threshold = var.cost_alert_threshold
 
   depends_on = [
-    module.project,
-    module.vertex_ai
+    module.project
+    #module.vertex_ai
   ]
 }

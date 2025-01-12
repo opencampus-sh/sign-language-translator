@@ -148,3 +148,11 @@ resource "google_secret_manager_secret_iam_member" "cloudbuild_service_account_a
     time_sleep.wait_for_secret_manager
   ]
 }
+
+# IAM policy to make the entire data bucket public
+resource "google_storage_bucket_iam_member" "data_public" {
+  bucket = "${var.project_id}-${var.environment}-data"
+  role   = "roles/storage.objectViewer"
+  member = "allUsers"
+}
+
