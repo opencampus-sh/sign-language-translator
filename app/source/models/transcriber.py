@@ -4,6 +4,7 @@ import whisper
 import tempfile
 import soundfile as sf
 import requests
+import numpy as np
 
 from abc import ABC, abstractmethod
 
@@ -26,20 +27,12 @@ class WhisperLocalTranscriber(AudioTranscriber):
         if audio_array is None:
             return ""
 
-        # Speichere Audio temporär (Whisper erwartet eine Datei)
-        #with tempfile.NamedTemporaryFile(suffix=".wav", delete=True) as temp_audio:
-        #    sf.write(temp_audio.name, audio_array, sample_rate)
-
-            # Transkribiere Audio
-            #result = self.model.transcribe(temp_audio.name, language="de")
-            #return result["text"]
-
         try:
             options = {
                 "language": "de",
                 "task": "transcribe",
-                "beam_size": 3,     # Reduziert von default 5
-                "best_of": 1,       # Reduziert von default 5
+                "beam_size": 3,  # Reduziert von default 5
+                "best_of": 1,  # Reduziert von default 5
                 "without_timestamps": True,
             }
 
@@ -79,18 +72,26 @@ class WhisperHuggingFaceTranscriber(AudioTranscriber):
             return ""
 
         try:
-            # Konvertiere das Audio-Array zu Mono, falls es Stereo ist
-            if len(audio_array.shape) > 1 and audio_array.shape[1] == 2:
-                audio_array = np.mean(audio_array, axis=1)  # Stereo zu Mono
+            # Ensure audio array is float32 and normalized between -1 and 1
+            audio_array = audio_array.astype(np.float32)
+            if np.abs(audio_array).max() > 1.0:
+                audio_array = audio_array / np.abs(audio_array).max()
 
-            # Temporäre Datei für das Audio erstellen
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=True) as temp_audio:
-                # Speichern als WAV-Datei im richtigen Format (z.B. 16-bit PCM)
-                sf.write(temp_audio.name, audio_array, sample_rate, subtype='PCM_16')  # 'PCM_16' für 16-bit WAV
+                # Use specific parameters for WAV file creation
+                sf.write(
+                    temp_audio.name,
+                    audio_array,
+                    sample_rate,
+                    format='WAV',
+                    subtype='FLOAT'  # Changed from PCM_16 to FLOAT
+                )
 
-                # Sende die Audiodatei an die Huggingface-API
+                # Ensure file is written before sending
+                temp_audio.flush()
+
                 with open(temp_audio.name, "rb") as audio_file:
-                    files = {"file": audio_file}
+                    files = {"file": ("audio.wav", audio_file, "audio/wav")}  # Added content type
                     headers = {"Authorization": f"Bearer {self.api_token}"}
                     response = requests.post(self.api_url, files=files, headers=headers)
 
@@ -107,4 +108,3 @@ class WhisperHuggingFaceTranscriber(AudioTranscriber):
             answer = f"Transkriptionsfehler: {str(e)}"
             print(answer)
             return answer
-
