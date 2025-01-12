@@ -1,15 +1,29 @@
 # app/components/voicetospeech_model.py
-from source.models.transcriber import WhisperLocalTranscriber
+import os
+from dotenv import load_dotenv
+from source.models.transcriber import WhisperHuggingFaceTranscriber, WhisperLocalTranscriber
 
 # Globale Instanz des Transcribers
 _transcriber = None
+# Lädt die Variablen aus der .env-Datei
+load_dotenv()
 
 
 def get_transcriber():
-    """Singleton-Patterns für den Transcriber"""
+    """Singleton-Pattern für den Transcriber"""
     global _transcriber
     if _transcriber is None:
-        _transcriber = WhisperLocalTranscriber()
+        # Wähle hier die gewünschte Transcriber-Instanz
+        use_huggingface = True  # Wechsel zwischen lokalem und Hugging Face Transcriber
+
+        if use_huggingface:
+            api_url = "https://api-inference.huggingface.co/models/openai/whisper-large-v3"
+            # api token from env-file
+            api_token = os.getenv("HUGGINGFACE_TOKEN")
+            _transcriber = WhisperHuggingFaceTranscriber(api_url, api_token)
+        else:
+            _transcriber = WhisperLocalTranscriber()
+
     return _transcriber
 
 
