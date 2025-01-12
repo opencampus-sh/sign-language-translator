@@ -1,0 +1,6 @@
+openai-whisper~=20240930
+mediapipe~=0.10.18
+pandas~=2.2.2
+gradio~=5.7.1
+numpy~=1.26.4
+protobuf~=4.25.5
