@@ -22,3 +22,24 @@ destination_path="raw-data/my_data.parquet",
 row_group_size=750
 )
 ```
+
+### Access Management
+
+Before using the storage utilities, ensure you have the correct permissions. An administrator needs to grant you access using the `manage_access.sh` script:
+
+```bash
+# Grant read-only access
+./infrastructure/manage_access.sh add user@example.com viewer storage
+
+# Grant write access (recommended for data creation)
+./infrastructure/manage_access.sh add user@example.com writer storage
+
+# Grant admin access (use with caution)
+./infrastructure/manage_access.sh add user@example.com admin storage
+```
+
+Available roles:
+
+- `viewer`: Read-only access
+- `writer`: Read and write access
+- `admin`: Full access including management operations
