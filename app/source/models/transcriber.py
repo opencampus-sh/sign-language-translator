@@ -72,39 +72,28 @@ class WhisperHuggingFaceTranscriber(AudioTranscriber):
             return ""
 
         try:
-            # Ensure audio array is float32 and normalized between -1 and 1
-            audio_array = audio_array.astype(np.float32)
-            if np.abs(audio_array).max() > 1.0:
-                audio_array = audio_array / np.abs(audio_array).max()
-
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=True) as temp_audio:
-                # Use specific parameters for WAV file creation
-                sf.write(
-                    temp_audio.name,
-                    audio_array,
-                    sample_rate,
-                    format='WAV',
-                    subtype='FLOAT'  # Changed from PCM_16 to FLOAT
-                )
-
-                # Ensure file is written before sending
+                # Write the audio array to a temporary file
+                sf.write(temp_audio.name, audio_array, sample_rate)
                 temp_audio.flush()
 
+                # Read and send the file directly as binary data
                 with open(temp_audio.name, "rb") as audio_file:
-                    files = {"file": ("audio.wav", audio_file, "audio/wav")}  # Added content type
                     headers = {"Authorization": f"Bearer {self.api_token}"}
-                    response = requests.post(self.api_url, files=files, headers=headers)
+                    response = requests.post(
+                        self.api_url,
+                        headers=headers,
+                        data=audio_file
+                    )
 
-                    # Überprüfe die Antwort und extrahiere den Text
                     if response.status_code == 200:
-                        result = response.json()
-                        return result.get("text", "Fehler: Kein Transkriptions-Text in der Antwort.")
+                        return response.json().get("text", "")
                     else:
-                        # Extrahiere den Fehlertext aus der Antwort der API
-                        error_message = response.json().get("error", "Unbekannter Fehler bei der Anfrage.")
-                        return f"Fehler bei der Anfrage an Huggingface API: {response.status_code} - {error_message}"
+                        print(f"Response headers: {response.headers}")
+                        print(f"Response content: {response.content}")
+                        return f"Error: {response.status_code} - {response.json()}"
 
         except Exception as e:
-            answer = f"Transkriptionsfehler: {str(e)}"
+            answer = f"Transcription error: {str(e)}"
             print(answer)
             return answer
