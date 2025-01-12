@@ -1,79 +1,41 @@
-# app/main.py
-from flask import Flask, request, jsonify
-import cv2
+# main.py
+
 import os
-from models import load_model_and_processor, ModelLoader
-from utils.keypoint_extraction import KeypointExtractor
-from utils.preprocessing import preprocess_keypoints
-import logging
+import sys
+import config
 
-logging.basicConfig(level=logging.DEBUG)
+# Füge den Projektroot zum Python-Pfad hinzu, falls nötig
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.append(project_root)
 
-app = Flask(__name__)
+from source.interface import create_interface
 
-# Initialize components
-keypoint_extractor = KeypointExtractor()
-model, processor = load_model_and_processor()
 
-@app.route('/health', methods=['GET'])
-def health_check():
-    """Health check endpoint."""
-    return jsonify({
-        'status': 'healthy',
-        'model_type': 'mock' if ModelLoader.is_using_mock() else 'production',
-        'model_path': ModelLoader.get_model_path()
-    })
+def create_app():
+    """Factory function to create the Gradio application."""
+    app = create_interface()
+    app.launch(
+        allowed_paths=[config.settings.STATIC_DIR],
+        server_name="127.0.0.1",
+        server_port=7860,
+        share=False,
+        debug=True,
+        inbrowser=True,
+        show_error=True,
+    )
+    return app
 
-@app.route('/process-sign-language', methods=['POST'])
-def process_sign_language():
-    """Process video and translate sign language."""
+
+def main():
+    """Main function to start the application."""
     try:
-        if 'video' not in request.files:
-            return jsonify({'error': 'No video file provided'}), 400
-        
-        video_file = request.files['video']
-        temp_path = '/tmp/temp_video.mp4'
-        video_file.save(temp_path)
-        
-        try:
-            # Process video frames
-            cap = cv2.VideoCapture(temp_path)
-            keypoints_sequence = []
-            
-            while cap.isOpened():
-                ret, frame = cap.read()
-                if not ret:
-                    break
-                
-                keypoints = keypoint_extractor.extract_keypoints(frame)
-                keypoints_sequence.append(keypoints)
-            
-            cap.release()
-        finally:
-            # Ensure temporary file is removed
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-        
-        if not keypoints_sequence:
-            return jsonify({'error': 'No frames could be extracted from video'}), 400
-        
-        # Preprocess and get prediction
-        model_input = preprocess_keypoints(keypoints_sequence)
-        outputs = model.generate(model_input)
-        transcription = processor.decode(outputs[0])
-        
-        return jsonify({
-            'transcription': transcription,
-            'model_type': 'mock' if ModelLoader.is_using_mock() else 'production',
-            'frames_processed': len(keypoints_sequence),
-            'status': 'success'
-        })
-        
+        create_app()
     except Exception as e:
-        return jsonify({
-            'error': str(e),
-            'status': 'error'
-        }), 500
+        import logging
+        logging.error(f"An error occurred while starting the app: {e}")
+        sys.exit(1)
+
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8000)))
+    main()
