@@ -125,6 +125,12 @@ import time
 
 # Install requirements
 # subprocess.run("{requirements_install}", shell=True, check=True)
+# Install ffmpeg
+subprocess.run(["apt-get", "update"])
+subprocess.run(["apt-get", "install", "-y", "ffmpeg"])
+
+# Verify installation
+subprocess.run(["ffmpeg", "-version"])
 
 {processing_fn}
 def process_single_video(input_path: str, temp_dir: str) -> str:
