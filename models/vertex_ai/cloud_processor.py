@@ -2,7 +2,7 @@ from google.cloud import aiplatform
 from google.cloud import storage
 import math
 from dataclasses import dataclass
-from typing import Optional, Literal
+from typing import Optional, Literal, List
 from threading import Thread
 from tqdm.notebook import tqdm
 import time
@@ -18,7 +18,7 @@ class MachineConfig:
 class JobConfig:
     provisioning_model: Literal["DEDICATED", "SPOT"] = "SPOT"
     restart_on_failure: bool = True
-    timeout_days: Optional[float] = None
+    timeout_days: Optional[float] = 2.0
 
 class CloudProcessor:
     def __init__(
@@ -74,6 +74,7 @@ class CloudProcessor:
         processing_fn: str,
         input_folder: str,
         output_folder: str,
+        requirements: List[str] = None,
         input_bucket: str = None,
         output_bucket: str = None,
         workers: int = 1,
@@ -106,6 +107,11 @@ class CloudProcessor:
 
         machine_config = machine_config or MachineConfig()
         job_config = job_config or JobConfig()
+
+        # Add pip install commands to script
+        requirements_install = ""
+        if requirements:
+            requirements_install = "pip install " + " ".join(requirements)
 
         # Define the script to be executed
         script_contents = f'''
