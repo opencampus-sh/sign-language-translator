@@ -1,7 +1,7 @@
 openai-whisper
 mediapipe~=0.10.18
 pandas==2.2.2
-gradio==5.7.1
+gradio==5.35.0
 numpy==1.26.4
 protobuf==4.25.5
 soundfile==0.12.1
