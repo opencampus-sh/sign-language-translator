@@ -4,7 +4,7 @@ import math
 from dataclasses import dataclass
 from typing import Optional, Literal, List
 from threading import Thread
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 import time
 
 @dataclass
@@ -119,9 +119,28 @@ import os
 from google.cloud import storage
 import tempfile
 import shutil
+import math
+import subprocess
+import time
+
+# Install requirements
+# subprocess.run("{requirements_install}", shell=True, check=True)
 
 {processing_fn}
-
+def process_single_video(input_path: str, temp_dir: str) -> str:
+    """Sample processing function that simulates video processing.
+    In practice, replace this with your actual processing logic."""
+    
+    # Simulate processing time
+    time.sleep(2)
+    
+    # Create a dummy output file
+    output_path = os.path.join(temp_dir, 'processed_' + os.path.basename(input_path))
+    with open(output_path, 'w') as f:
+        f.write('Processed content')
+    
+    return output_path
+    
 def process_batch(start_idx, end_idx, input_bucket, output_bucket, input_folder, output_folder):
     client = storage.Client()
     bucket = client.bucket(input_bucket)
@@ -148,9 +167,16 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     if {workers} > 1:
-        parser.add_argument("--worker-id", type=int, required=True)
+        parser.add_argument("--worker-id", type=int, default=0)
         parser.add_argument("--num-workers", type=int, required=True)
         args = parser.parse_args()
+        
+        # Get worker ID from environment variable if not provided via args
+        if args.worker_id == 0 and 'CLOUD_ML_TASK_ID' in os.environ:
+            task_id = int(os.environ['CLOUD_ML_TASK_ID'])
+            worker_pool_id = int(os.environ.get('CLOUD_ML_WORKER_POOL_ID', 0))
+            # Master pool (ID 0) gets worker_id 0, worker pool (ID 1) gets task_id + 1
+            args.worker_id = task_id + 1 if worker_pool_id == 1 else 0
         
         total_items = len(list(storage.Client().list_blobs("{input_bucket}")))
         items_per_worker = math.ceil(total_items / args.num_workers)
@@ -186,7 +212,7 @@ if __name__ == "__main__":
                 "container_spec": {
                     "image_uri": "europe-docker.pkg.dev/vertex-ai/training/tf-cpu.2-14.py310:latest",
                     "command": ["python", "-c", script_contents],
-                    "args": ["--worker-id=0", f"--num-workers={workers}"] if workers > 1 else []
+                    "args": [f"--num-workers={workers}"] if workers > 1 else []
                 },
                 "disk_spec": {
                     "boot_disk_type": "pd-ssd",
@@ -207,7 +233,7 @@ if __name__ == "__main__":
                 "container_spec": {
                     "image_uri": "europe-docker.pkg.dev/vertex-ai/training/tf-cpu.2-14.py310:latest",
                     "command": ["python", "-c", script_contents],
-                    "args": [f"--worker-id=$(JOB_ID)", f"--num-workers={workers}"]
+                    "args": [f"--num-workers={workers}"]
                 },
                 "disk_spec": {
                     "boot_disk_type": "pd-ssd",
