@@ -22,11 +22,11 @@ def process_csv_row(input_path: str, temp_dir: str) -> str:
     from natsort import natsorted
     
     # Read CSV row data from JSON file
-    with open(input_path, 'r', encoding='utf-8') as f:
+    with open(input_path, "r", encoding="utf-8") as f:
         row_data = json.load(f)
     
-    video_url = row_data.get('webm')  # Use medium quality
-    video_id = row_data.get('date', 'unknown') + '_' + row_data.get('time', 'unknown').replace(':', '')
+    video_url = row_data.get("webm")  # Use medium quality
+    video_id = row_data.get("date", "unknown") + "_" + row_data.get("time", "unknown").replace(":", "")
     
     if not video_url:
         raise ValueError("No video URL found in row data")
@@ -41,7 +41,7 @@ def process_csv_row(input_path: str, temp_dir: str) -> str:
     print(f"Downloading video...")
     response = requests.get(video_url, stream=True, timeout=300)
     if response.status_code == 200:
-        with open(video_path, 'wb') as f:
+        with open(video_path, "wb") as f:
             for chunk in response.iter_content(chunk_size=1024*1024):  # 1MB chunks
                 if chunk:
                     f.write(chunk)
@@ -51,10 +51,10 @@ def process_csv_row(input_path: str, temp_dir: str) -> str:
     
     # Define expected number of landmarks
     EXPECTED_LANDMARKS = {
-        'pose': 33,
-        'face': 468,
-        'left_hand': 21,
-        'right_hand': 21
+        "pose": 33,
+        "face": 468,
+        "left_hand": 21,
+        "right_hand": 21
     }
     
     # Extract landmarks
@@ -77,19 +77,19 @@ def process_csv_row(input_path: str, temp_dir: str) -> str:
     ) as holistic:
         frame_count = 0
         while cap.isOpened():
+            
             ret, frame = cap.read()
             if not ret:
                 break
-                
             # Initialize frame data dictionary with zeros
-            current_frame_data = {'frame': frame_count}
+            current_frame_data = {"frame": frame_count}
             
             for landmark_type, num_landmarks in EXPECTED_LANDMARKS.items():
                 for idx in range(num_landmarks):
-                    current_frame_data[f'{landmark_type}-{idx}-x'] = 0
-                    current_frame_data[f'{landmark_type}-{idx}-y'] = 0
-                    current_frame_data[f'{landmark_type}-{idx}-z'] = 0
-                    current_frame_data[f'{landmark_type}-{idx}-visibility'] = 0
+                    current_frame_data[f"{landmark_type}-{idx}-x"] = 0
+                    current_frame_data[f"{landmark_type}-{idx}-y"] = 0
+                    current_frame_data[f"{landmark_type}-{idx}-z"] = 0
+                    current_frame_data[f"{landmark_type}-{idx}-visibility"] = 0
             
             # Get frame dimensions and crop to right half (where sign language interpreter is)
             height, width, _ = frame.shape
@@ -102,31 +102,31 @@ def process_csv_row(input_path: str, temp_dir: str) -> str:
             # Update landmarks when detected
             if results.pose_landmarks:
                 for idx, landmark in enumerate(results.pose_landmarks.landmark):
-                    current_frame_data[f'pose-{idx}-x'] = landmark.x
-                    current_frame_data[f'pose-{idx}-y'] = landmark.y
-                    current_frame_data[f'pose-{idx}-z'] = landmark.z
-                    current_frame_data[f'pose-{idx}-visibility'] = landmark.visibility
+                    current_frame_data[f"pose-{idx}-x"] = landmark.x
+                    current_frame_data[f"pose-{idx}-y"] = landmark.y
+                    current_frame_data[f"pose-{idx}-z"] = landmark.z
+                    current_frame_data[f"pose-{idx}-visibility"] = landmark.visibility
             
             if results.face_landmarks:
                 for idx, landmark in enumerate(results.face_landmarks.landmark):
-                    current_frame_data[f'face-{idx}-x'] = landmark.x
-                    current_frame_data[f'face-{idx}-y'] = landmark.y
-                    current_frame_data[f'face-{idx}-z'] = landmark.z
-                    current_frame_data[f'face-{idx}-visibility'] = 1
+                    current_frame_data[f"face-{idx}-x"] = landmark.x
+                    current_frame_data[f"face-{idx}-y"] = landmark.y
+                    current_frame_data[f"face-{idx}-z"] = landmark.z
+                    current_frame_data[f"face-{idx}-visibility"] = 1
             
             if results.left_hand_landmarks:
                 for idx, landmark in enumerate(results.left_hand_landmarks.landmark):
-                    current_frame_data[f'left_hand-{idx}-x'] = landmark.x
-                    current_frame_data[f'left_hand-{idx}-y'] = landmark.y
-                    current_frame_data[f'left_hand-{idx}-z'] = landmark.z
-                    current_frame_data[f'left_hand-{idx}-visibility'] = 1
+                    current_frame_data[f"left_hand-{idx}-x"] = landmark.x
+                    current_frame_data[f"left_hand-{idx}-y"] = landmark.y
+                    current_frame_data[f"left_hand-{idx}-z"] = landmark.z
+                    current_frame_data[f"left_hand-{idx}-visibility"] = 1
             
             if results.right_hand_landmarks:
                 for idx, landmark in enumerate(results.right_hand_landmarks.landmark):
-                    current_frame_data[f'right_hand-{idx}-x'] = landmark.x
-                    current_frame_data[f'right_hand-{idx}-y'] = landmark.y
-                    current_frame_data[f'right_hand-{idx}-z'] = landmark.z
-                    current_frame_data[f'right_hand-{idx}-visibility'] = 1
+                    current_frame_data[f"right_hand-{idx}-x"] = landmark.x
+                    current_frame_data[f"right_hand-{idx}-y"] = landmark.y
+                    current_frame_data[f"right_hand-{idx}-z"] = landmark.z
+                    current_frame_data[f"right_hand-{idx}-visibility"] = 1
             
             frame_data[frame_count] = current_frame_data
             
@@ -139,8 +139,8 @@ def process_csv_row(input_path: str, temp_dir: str) -> str:
     
     # Save landmarks to parquet
     landmarks_output = os.path.join(temp_dir, f"{video_id}_landmarks.parquet")
-    df = pd.DataFrame.from_dict(frame_data, orient='index')
-    df = df[['frame'] + natsorted([col for col in df.columns if col != 'frame'])]
+    df = pd.DataFrame.from_dict(frame_data, orient="index")
+    df = df[["frame"] + natsorted([col for col in df.columns if col != "frame"])]
     df.to_parquet(landmarks_output, engine="pyarrow")
     print(f"Saved landmarks: {landmarks_output}")
     
@@ -150,11 +150,11 @@ def process_csv_row(input_path: str, temp_dir: str) -> str:
     # Extract audio from video
     audio_path = os.path.join(temp_dir, f"{video_id}_audio.wav")
     command = [
-        'ffmpeg',
-        '-i', video_path,
-        '-ar', '16000',  # Sample rate required by Whisper
-        '-ac', '1',      # Mono audio
-        '-y',            # Overwrite output file
+        "ffmpeg",
+        "-i", video_path,
+        "-ar", "16000",  # Sample rate required by Whisper
+        "-ac", "1",      # Mono audio
+        "-y",            # Overwrite output file
         audio_path
     ]
     
@@ -199,3 +199,9 @@ def process_csv_row(input_path: str, temp_dir: str) -> str:
     
     print(f"Processing complete for {video_id}")
     return landmarks_output  # Return the landmarks file path 
+
+if __name__ == "__main__":    
+    input_path = "/home/jku/sign-language-translator/test_data/csv_folder/row_000000.json"
+    temp_dir = "/home/jku/sign-language-translator/test_data/temp_dir"
+    output_path = process_csv_row(input_path, temp_dir)
+    print(f"Output saved to: {output_path}")
