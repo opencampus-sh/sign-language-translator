@@ -1,10 +1,8 @@
+import inspect
 from google.cloud import aiplatform
 from google.cloud import storage
-import math
-import ast
-import re
 from dataclasses import dataclass
-from typing import Optional, Literal, List
+from typing import Callable, Optional, Literal, List
 from threading import Thread
 from tqdm import tqdm
 import time
@@ -55,71 +53,6 @@ class CloudProcessor:
         self.staging_bucket = staging_bucket
         self.data_bucket = data_bucket
 
-    def _extract_function_names(self, function_code: str) -> List[str]:
-        """
-        Extract function names from a string containing Python function definitions.
-        
-        Args:
-            function_code (str): String containing Python function definitions
-            
-        Returns:
-            List[str]: List of function names found in the code
-            
-        Raises:
-            ValueError: If no functions are found or if the code is invalid
-        """
-        try:
-            # Parse the code into an AST
-            tree = ast.parse(function_code)
-            
-            # Find all function definitions
-            function_names = []
-            for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef):
-                    function_names.append(node.name)
-            
-            if not function_names:
-                # Fallback to regex if AST doesn't work
-                regex_matches = re.findall(r'def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(', function_code)
-                if regex_matches:
-                    function_names = regex_matches
-                else:
-                    raise ValueError("No function definitions found in the provided code")
-            
-            return function_names
-            
-        except SyntaxError as e:
-            raise ValueError(f"Invalid Python syntax in function code: {e}")
-        except Exception as e:
-            # Fallback to regex approach
-            regex_matches = re.findall(r'def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(', function_code)
-            if regex_matches:
-                return regex_matches
-            else:
-                raise ValueError(f"Could not extract function names: {e}")
-
-    def _get_main_function_name(self, function_code: str) -> str:
-        """
-        Get the main processing function name from the function code.
-        If multiple functions are defined, returns the first one.
-        
-        Args:
-            function_code (str): String containing Python function definitions
-            
-        Returns:
-            str: The name of the main processing function
-        """
-        function_names = self._extract_function_names(function_code)
-        
-        if len(function_names) == 1:
-            return function_names[0]
-        elif len(function_names) > 1:
-            # If multiple functions, look for common patterns or return the first one
-            # You could add logic here to identify the "main" function if needed
-            return function_names[0]
-        else:
-            raise ValueError("No processing function found in the provided code")
-
     def _monitor_job_progress(self, input_bucket: str, output_bucket: str):
         """Monitor job progress by counting files in output bucket"""
         client = storage.Client()
@@ -138,7 +71,7 @@ class CloudProcessor:
     
     def submit_job(
         self,
-        processing_fn: str,
+        processing_fn: Callable,
         input_folder: str,
         output_folder: str,
         requirements: List[str] = None,
@@ -154,7 +87,7 @@ class CloudProcessor:
         Submit a processing job to Vertex AI
         
         Args:
-            processing_fn (str): The function to be executed
+            processing_fn (Callable): The function to be executed
             input_folder (str): The folder path for input files (e.g. "raw-data/")
             output_folder (str): The folder path for output files (e.g. "landmarks/")
             input_bucket (str, optional): Override the default data bucket for input
@@ -175,16 +108,12 @@ class CloudProcessor:
         machine_config = machine_config or MachineConfig()
         job_config = job_config or JobConfig()
 
+        processing_fn_source = inspect.getsource(processing_fn)
         # Extract the main function name from the processing function
         try:
-            main_function_name = self._get_main_function_name(processing_fn)
+            processing_fn_name = processing_fn.__name__
         except Exception as e:
             raise ValueError(f"Failed to extract function name from processing_fn: {e}")
-
-        # Add pip install commands to script
-        requirements_install = ""
-        if requirements:
-            requirements_install = "pip install " + " ".join(requirements)
 
         # Define the script to be executed
         script_contents = f'''
@@ -193,19 +122,9 @@ from google.cloud import storage
 import tempfile
 import shutil
 import math
-import subprocess
 import time
 
-# Install requirements
-# subprocess.run("{requirements_install}", shell=True, check=True)
-# Install ffmpeg
-subprocess.run(["apt-get", "update"])
-subprocess.run(["apt-get", "install", "-y", "ffmpeg"])
-
-# Verify installation
-subprocess.run(["ffmpeg", "-version"])
-
-{processing_fn}
+{processing_fn_source}
     
 def process_batch(start_idx, end_idx, input_bucket, output_bucket, input_folder, output_folder):
     client = storage.Client()
@@ -218,7 +137,7 @@ def process_batch(start_idx, end_idx, input_bucket, output_bucket, input_folder,
             blob.download_to_filename(input_path)
             
             try:
-                output_path = {main_function_name}(input_path, temp_dir)
+                output_path = {processing_fn_name}(input_path, temp_dir)
                 output_blob = client.bucket(output_bucket).blob(
                     output_folder + "processed_" + os.path.basename(blob.name)
                 )
@@ -277,8 +196,13 @@ if __name__ == "__main__":
                 "replica_count": 1,  # Master pool always has 1 replica
                 "container_spec": {
                     "image_uri": "europe-docker.pkg.dev/vertex-ai/training/tf-cpu.2-14.py310:latest",
-                    "command": ["python", "-c", script_contents],
-                    "args": [f"--num-workers={workers}"] if workers > 1 else []
+                    "command": [
+                        "bash", 
+                        "-c"
+                    ],
+                    "args": [
+                        f"pip install {' '.join(requirements) if requirements else ''}; apt-get update && apt-get install -y ffmpeg && python -c '{script_contents}' {f'--num-workers={workers}' if workers > 1 else ''}"
+                    ]
                 },
                 "disk_spec": {
                     "boot_disk_type": "pd-ssd",
@@ -298,8 +222,13 @@ if __name__ == "__main__":
                 "replica_count": workers - 1,  # Remaining workers
                 "container_spec": {
                     "image_uri": "europe-docker.pkg.dev/vertex-ai/training/tf-cpu.2-14.py310:latest",
-                    "command": ["python", "-c", script_contents],
-                    "args": [f"--num-workers={workers}"]
+                    "command": [
+                        "bash", 
+                        "-c"
+                    ],
+                    "args": [
+                        f"pip install {' '.join(requirements) if requirements else ''}; apt-get update && apt-get install -y ffmpeg && python -c '{script_contents}' {f'--num-workers={workers}'}"
+                    ]
                 },
                 "disk_spec": {
                     "boot_disk_type": "pd-ssd",
